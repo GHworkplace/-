@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🦞 CS2 战队 BP 策略分析与对战战局沙盘推演系统</title>
+  <meta name="description" content="小龙虾 CS2 BP 策略分析与对战战局沙盘推演系统。提供专业的战队地图池胜率分析、AI最优BP推荐策略、What-if分支推演比较，以及回合级沙盘模拟推演。">
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Noto+Sans+SC:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Global Stylesheet -->
+  <link rel="stylesheet" href="./src/css/style.css">
+</head>
+<body class="tactical-dark-theme">
+  <!-- Layout Wrapper -->
+  <div class="app-layout">
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-lobster">🦞</span>
+        <h1 class="brand-title">小龙虾 <span class="glow-text text-green">CS2 BP</span> 策略分析与沙盘推演系统</h1>
+      </div>
+
+      <!-- Navigation Tabs Router -->
+      <nav class="header-nav">
+        <button id="tab-btn-dashboard" class="nav-tab-btn active" id="tab-dashboard">
+          <span class="tab-icon">📊</span> 战队数据看板
+        </button>
+        <button id="tab-btn-simulator" class="nav-tab-btn" id="tab-simulator">
+          <span class="tab-icon">🎯</span> 智能 BP 模拟器
+        </button>
+        <button id="tab-btn-sandbox" class="nav-tab-btn" id="tab-sandbox">
+          <span class="tab-icon">🎮</span> 战局沙盘推演
+        </button>
+      </nav>
+    </header>
+
+    <!-- Main Dynamic Content Mounting Point -->
+    <main class="app-main-content">
+      <div id="app-mount-point">
+        <!-- Rendered component templates will be injected here -->
+        <div class="app-loading-screen">
+          <div class="spinner"></div>
+          <p>正在加载推演引擎和战队数据库...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <div class="footer-container">
+        <span class="footer-text">© 2026 小龙虾 CS2 策略沙盘推演项目组. 离线原生版.</span>
+        <span class="footer-meta">Active Duty 7图 + 可选 2图 离线智能推荐权重算法已启用.</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Entry Script (ES Modules) -->
+  <script type="module" src="./src/js/main.js"></script>
+</body>
+</html>
