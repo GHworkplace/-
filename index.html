@@ -1,0 +1,3407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线性代数交互式可视化学习工具</title>
+    <!-- 引入高质感现代字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@400;600;800&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 颜色系统 - HSL 柔和荧光色调 */
+            --bg-main: #090d16;
+            --bg-sidebar: rgba(13, 20, 35, 0.85);
+            --bg-card: rgba(22, 33, 54, 0.5);
+            --border-glow: rgba(56, 189, 248, 0.2);
+            --border-light: rgba(255, 255, 255, 0.08);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            /* 向量与几何体主题色 */
+            --color-i: #38bdf8; /* 天蓝 */
+            --color-j: #34d399; /* 翠绿 */
+            --color-k: #a855f7; /* 薰衣草紫 (3D中为Z轴) */
+            --color-u: #f472b6; /* 玫瑰粉 */
+            --color-v: #fb7185; /* 珊瑚红 */
+            --color-w: #fbbf24; /* 琥珀黄 */
+            --color-eigen: #f43f5e; /* 玫瑰红 */
+            --color-basis: #c084fc; /* 浅紫 */
+            --color-area-pos: rgba(56, 189, 248, 0.25);
+            --color-area-neg: rgba(244, 63, 94, 0.25);
+            
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Work Sans', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 基础样式重置与排版 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            line-height: 1.5;
+        }
+
+        input, button, select {
+            font-family: inherit;
+            color: inherit;
+        }
+
+        /* 页面布局 */
+        .app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* 侧边栏样式 - 磨砂玻璃质感 */
+        .sidebar {
+            width: 440px;
+            height: 100%;
+            background: var(--bg-sidebar);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-light) transparent;
+        }
+
+        .sidebar-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .sidebar-header h1 {
+            font-family: var(--font-display);
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* 导航标签页 - 2行4列格栅 */
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-bottom: 1px solid var(--border-light);
+            background: rgba(9, 13, 22, 0.4);
+            padding: 6px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 2px;
+            font-size: 10.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            text-align: center;
+        }
+
+        .tab-btn svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.7;
+            transition: var(--transition-smooth);
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--color-i);
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .tab-btn.active svg {
+            opacity: 1;
+            stroke: var(--color-i);
+        }
+
+        /* 内容区域 */
+        .sidebar-content {
+            padding: 20px 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 卡片面板 */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 16px;
+            transition: var(--transition-smooth);
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 3px solid var(--color-i);
+            padding-left: 8px;
+        }
+
+        .theory-text {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        /* 数学表示面板 */
+        .math-display {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-left: 2px solid rgba(255, 255, 255, 0.05);
+            overflow-x: auto;
+        }
+
+        .math-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        /* 矩阵的CSS渲染 */
+        .css-matrix {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 4px;
+            position: relative;
+        }
+
+        .css-matrix::before, .css-matrix::after {
+            content: '';
+            width: 5px;
+            height: 100%;
+            border: 1.5px solid var(--text-primary);
+            position: absolute;
+            top: 0;
+        }
+
+        .css-matrix::before {
+            left: 0;
+            border-right: none;
+        }
+
+        .css-matrix::after {
+            right: 0;
+            border-left: none;
+        }
+
+        .matrix-content {
+            padding: 4px 6px;
+            display: grid;
+            gap: 4px;
+            text-align: center;
+        }
+
+        .matrix-3x3 {
+            grid-template-columns: repeat(3, 40px);
+        }
+
+        .matrix-2x2 {
+            grid-template-columns: repeat(2, 45px);
+        }
+
+        .matrix-2x1 {
+            grid-template-columns: 45px;
+        }
+
+        .matrix-3x1 {
+            grid-template-columns: 40px;
+        }
+
+        .matrix-cell {
+            padding: 1px;
+            font-size: 11px;
+            min-width: 28px;
+        }
+
+        /* 控制组件与输入 */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+        }
+
+        .slider-label {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .slider-label-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .slider-val {
+            font-family: var(--font-mono);
+            font-weight: 500;
+        }
+
+        /* 自定义滑块 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border: 2px solid var(--bg-main);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+
+        .slider-u::-webkit-slider-thumb { background: var(--color-u) !important; }
+        .slider-v::-webkit-slider-thumb { background: var(--color-v) !important; }
+        .slider-w::-webkit-slider-thumb { background: var(--color-w) !important; }
+
+        /* 矩阵输入表单 */
+        .matrix-input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .matrix-input-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .matrix-input-cell label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .matrix-input-cell input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 12px;
+            font-family: var(--font-mono);
+            text-align: center;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .matrix-input-cell input:focus {
+            border-color: var(--color-i);
+        }
+
+        /* 3D 矩阵输入格 */
+        .matrix3d-input-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        /* 按钮 */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-0.5px);
+        }
+
+        .btn-primary {
+            background: var(--color-i);
+            color: var(--bg-main);
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: #7dd3fc;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+            color: var(--bg-main);
+        }
+
+        .btn-secondary {
+            border-color: rgba(56, 189, 248, 0.2);
+            color: var(--color-i);
+        }
+
+        /* 预设列表标签 */
+        .preset-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .preset-chip {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-light);
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .preset-chip:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .preset-chip.active {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.25);
+            color: var(--color-i);
+        }
+
+        /* 主画布视口 */
+        .canvas-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at center, #0e1626 0%, #03060d 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 动画双阶段进度条 */
+        .composite-progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 6px;
+            display: none;
+        }
+        .composite-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--color-w);
+            transition: width 0.05s linear;
+        }
+
+        /* 悬浮面板 */
+        .viewport-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            z-index: 5;
+        }
+
+        .viewport-btn {
+            background: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            color: var(--text-secondary);
+        }
+
+        .viewport-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .status-overlay {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 14px;
+            min-width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11.5px;
+        }
+
+        .status-title {
+            color: var(--text-secondary);
+        }
+
+        .status-value {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 600;
+        }
+
+        .badge-positive {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--color-j);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+
+        .badge-negative {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--color-eigen);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        .badge-warning {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--color-w);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        /* 提示框 */
+        .toast-container {
+            position: absolute;
+            bottom: 24px;
+            left: 464px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(8px);
+            border-left: 4px solid var(--color-i);
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            border-right: 1px solid var(--border-light);
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* 回归自测 modal */
+        .test-report-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.25);
+            border-radius: 16px;
+            width: 480px;
+            padding: 24px;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            display: none;
+        }
+
+        .test-report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .test-report-header h3 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .test-report-body {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .test-line {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .test-pass { color: var(--color-j); }
+        .test-fail { color: var(--color-eigen); }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            backdrop-filter: blur(4px);
+            display: none;
+        }
+
+        .drag-tip {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(9, 13, 22, 0.6);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+            pointer-events: none;
+            animation: pulse 2s infinite ease-in-out;
+            z-index: 4;
+            text-align: center;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        /* 响应式排版 */
+        @media (max-width: 960px) {
+            body {
+                flex-direction: column-reverse;
+                overflow: auto;
+            }
+            .app-container {
+                flex-direction: column-reverse;
+                height: auto;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-top: 1px solid var(--border-light);
+            }
+            .canvas-container {
+                height: 500px;
+                width: 100%;
+            }
+            .toast-container {
+                left: 20px;
+            }
+        }
+
+        /* 实际应用卡片 */
+        .app-case-card {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(30, 41, 59, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-case-card:hover {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(56, 189, 248, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 12px rgba(56, 189, 248, 0.2);
+        }
+
+        .app-case-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #38bdf8, #0ea5e9);
+            opacity: 0.8;
+        }
+
+        .app-case-card-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #38bdf8;
+            margin-bottom: 6px;
+        }
+
+        .app-case-card-text {
+            font-size: 11.5px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 6px;
+        }
+
+        .app-case-card-tech {
+            font-size: 10.5px;
+            color: var(--color-eigen);
+            font-family: var(--font-mono);
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .app-case-highlight {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏结构 -->
+        <aside class="sidebar">
+            <div class="sidebar-header" id="sidebar-hdr" title="双击页眉打开内置自检报告">
+                <h1>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    线性代数几何可视化
+                </h1>
+                <p>探索向量、复合变换、特征椭圆与三维正交投影</p>
+            </div>
+
+            <!-- Tab 导航 - 2排4列 -->
+            <nav class="tabs">
+                <button class="tab-btn active" data-tab="1">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    1. 向量组合
+                </button>
+                <button class="tab-btn" data-tab="2">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+                    2. 线性变换
+                </button>
+                <button class="tab-btn" data-tab="3">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    3. 复合变换
+                </button>
+                <button class="tab-btn" data-tab="4">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                    4. 行列式
+                </button>
+                <button class="tab-btn" data-tab="5">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    5. 基底变换
+                </button>
+                <button class="tab-btn" data-tab="6">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><line x1="18" y1="3" x2="6" y2="21"></line><line x1="6" y1="3" x2="18" y2="21"></line></svg>
+                    6. 线性方程
+                </button>
+                <button class="tab-btn" data-tab="7">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path></svg>
+                    7. 特征椭圆
+                </button>
+                <button class="tab-btn" data-tab="8">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    8. 3D变换
+                </button>
+            </nav>
+
+            <!-- 动态面板内容 -->
+            <div class="sidebar-content">
+                <!-- 章节 1：向量组合 -->
+                <div class="panel chapter-panel" id="panel-chapter-1">
+                    <div class="panel-title">向量与线性组合</div>
+                    <p class="theory-text">
+                        <b>线性组合</b>是通过拉伸（数乘）和求和将多个向量结合。
+                        任意两个不共线向量可以张成（Span）整个 2D 平面。
+                    </p>
+                    <div class="control-group">
+                        <div class="slider-wrapper">
+                            <div class="slider-header">
+                                <span class="slider-label"><span class="slider-label-dot" style="background: var(--color-u);"></span>标量 c (控制 u)</span>
+                                <span class="slider-val" id="val-c">1.0</span>
+                            </div>
+                            <input type="range" class="slider-u" id="slider-c" min="-3" max="3" step="0.1" value="1.0">
+                        </div>
+                        <div class="slider-wrapper">
+                            <div class="slider-header">
+                                <span class="slider-label"><span class="slider-label-dot" style="background: var(--color-v);"></span>标量 d (控制 v)</span>
+                                <span class="slider-val" id="val-d">1.0</span>
+                            </div>
+                            <input type="range" class="slider-v" id="slider-d" min="-3" max="3" step="0.1" value="1.0">
+                        </div>
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; color: var(--text-secondary);">
+                                <input type="checkbox" id="chk-show-span" style="width: 15px; height: 15px; cursor: pointer;">
+                                显示两向量的张成网格 (Span Grid)
+                            </label>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line">
+                                <span id="formula-scalar-c">1.0</span>
+                                <div class="css-matrix"><div class="matrix-content matrix-2x1"><div class="matrix-cell" id="formula-u-x">2.0</div><div class="matrix-cell" id="formula-u-y">1.0</div></div></div>
+                                <span>+</span>
+                                <span id="formula-scalar-d">1.0</span>
+                                <div class="css-matrix"><div class="matrix-content matrix-2x1"><div class="matrix-cell" id="formula-v-x">-1.0</div><div class="matrix-cell" id="formula-v-y">2.0</div></div></div>
+                                <span>=</span>
+                                <div class="css-matrix" style="color: var(--color-w);"><div class="matrix-content matrix-2x1"><div class="matrix-cell" id="formula-w-x">1.0</div><div class="matrix-cell" id="formula-w-y">3.0</div></div></div>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c1="ortho">正交基底</button>
+                            <button class="preset-chip" data-preset-c1="colinear">共线向量 (塌缩)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="1">
+                            <div class="app-case-card-title">
+                                🎬 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>3D射击与光线投射 (Ray Casting)</b>：在渲染中，光线追踪的路径表示为起点和朝向向量的线性组合 $\vec{P}(t) = \vec{O} + t \cdot \vec{D}$。物理引擎中，角色跳跃或坠落时的轨迹则是重力、风力与初速度向量的线性叠加。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布将展示重力和风力叠加的<b>绿色弹道抛物线</b>，拖动滑块 c 和 d 将改变这两个分力，改变合力与轨迹。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：射线投射检测 (Raycast)、合力线性叠加
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 2：矩阵变换 -->
+                <div class="panel chapter-panel" id="panel-chapter-2" style="display: none;">
+                    <div class="panel-title">矩阵与单线性变换</div>
+                    <p class="theory-text">
+                        矩阵可以被视作一种空间映射。通过将标准基向量 $\hat{i}$ 映射为第一列 $i'$，将 $\hat{j}$ 映射为第二列 $j'$，即可完全确定整个网格的形变。
+                    </p>
+                    <div class="control-group">
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><label>i'x (a)</label><input type="number" id="mat-a" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><label>j'x (b)</label><input type="number" id="mat-b" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><label>i'y (c)</label><input type="number" id="mat-c" step="0.1" value="0.0"></div>
+                            <div class="matrix-input-cell"><label>j'y (d)</label><input type="number" id="mat-d" step="0.1" value="1.0"></div>
+                        </div>
+                        <div class="btn-grid">
+                            <button class="btn btn-primary" id="btn-animate">播放变换动画</button>
+                            <button class="btn btn-secondary" id="btn-reset-transform">还原网格</button>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line">
+                                <span>矩阵 A = </span>
+                                <div class="css-matrix">
+                                    <div class="matrix-content matrix-2x2">
+                                        <div class="matrix-cell" id="form-mat-a">1.0</div>
+                                        <div class="matrix-cell" id="form-mat-b">1.0</div>
+                                        <div class="matrix-cell" id="form-mat-c">0.0</div>
+                                        <div class="matrix-cell" id="form-mat-d">1.0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c2="identity">恒等映射</button>
+                            <button class="preset-chip" data-preset-c2="shear">剪切变换 (Shear)</button>
+                            <button class="preset-chip" data-preset-c2="rotation">旋转 45°</button>
+                            <button class="preset-chip" data-preset-c2="projection">垂直投影</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="2">
+                            <div class="app-case-card-title">
+                                🎮 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>三维模型顶点着色器 (Vertex Shader)</b>：GPU 在渲染角色的每一帧时，会用变换矩阵与模型的数万个顶点向量相乘，实现角色战机在游戏场景中的实时缩放、剪切与旋转。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布中心将渲染一艘<b>游戏矢量战机 Sprite</b>，它会跟随网格矩阵一同变形、缩放或剪切。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：顶点着色器世界变换 (World Matrix)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 3：复合变换 -->
+                <div class="panel chapter-panel" id="panel-chapter-3" style="display: none;">
+                    <div class="panel-title">复合变换与矩阵乘法</div>
+                    <p class="theory-text">
+                        两个变换的复合（先应用 $B$，再应用 $A$）由<b>矩阵乘法 $AB$</b> 表示。因为作用顺序是从右向左，所以先 $B$ 后 $A$ 写作 $AB$。
+                    </p>
+                    <div class="control-group">
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom: 2px;">矩阵 A (第二步变换):</div>
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><input type="number" id="cmat-a" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-b" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-c" step="0.1" value="0.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-d" step="0.1" value="1.0"></div>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom: 2px;">矩阵 B (第一步变换):</div>
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><input type="number" id="cmat-e" step="0.1" value="0.7"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-f" step="0.1" value="-0.7"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-g" step="0.1" value="0.7"></div>
+                            <div class="matrix-input-cell"><input type="number" id="cmat-h" step="0.1" value="0.7"></div>
+                        </div>
+                        <div class="btn-grid">
+                            <button class="btn btn-primary" id="btn-composite-animate">播放复合变换</button>
+                            <button class="btn btn-secondary" id="btn-composite-reset">还原网格</button>
+                        </div>
+                        <div class="composite-progress" id="comp-progress-container">
+                            <div class="composite-progress-bar" id="comp-progress-bar"></div>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line" style="font-size:11.5px;">
+                                <span>乘积 AB = </span>
+                                <div class="css-matrix"><div class="matrix-content matrix-2x2" id="comp-mat-a-box"><!-- dynamic --></div></div>
+                                <span>×</span>
+                                <div class="css-matrix"><div class="matrix-content matrix-2x2" id="comp-mat-b-box"><!-- dynamic --></div></div>
+                                <span>=</span>
+                                <div class="css-matrix" style="color: var(--color-w);"><div class="matrix-content matrix-2x2" id="comp-mat-res-box"><!-- dynamic --></div></div>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c3="rot-then-shear">先旋转后剪切 (AB)</button>
+                            <button class="preset-chip" data-preset-c3="shear-then-rot">先剪切后旋转 (BA)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="3">
+                            <div class="app-case-card-title">
+                                🎬 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>角色骨骼层级动画 (Skeletal Hierarchy)</b>：3D 角色的手指、手掌、手臂是父子级骨骼。手指动作基于手掌，手掌基于手臂。变换矩阵自下而上相乘复合。因为矩阵相乘不满足交换律 ($AB \ne BA$)，导致“先旋转后平移”和“先平移后旋转”结果截然不同。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布右下角将渲染一个由“肩-肘-手”组成的多关节<b>机械臂骨骼</b>。播放复合动画时，可直观看到分步矩阵乘法如何带动各层级关节旋转。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：前向动力学 (FK) 骨骼变换、非交换律
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 4：行列式 -->
+                <div class="panel chapter-panel" id="panel-chapter-4" style="display: none;">
+                    <div class="panel-title">行列式与面积缩放</div>
+                    <p class="theory-text">
+                        行列式 $\det(A)$ 代表线性变换对面积的缩放比例。当 $\det(A) < 0$ 时，空间定向（如基底的相对偏向）发生镜像反转。
+                    </p>
+                    <div class="control-group">
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><input type="number" id="det-mat-a" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="det-mat-b" step="0.1" value="1.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="det-mat-c" step="0.1" value="0.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="det-mat-d" step="0.1" value="1.0"></div>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line"><span>det(A) = ad - bc</span></div>
+                            <div class="math-line" style="font-weight: bold; font-size:13px; margin-top:4px;">
+                                <span>det(A) = </span>
+                                <span id="det-calc-process"></span>
+                                <span> = </span>
+                                <span id="det-calc-result" style="color: var(--color-i);">1.00</span>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c4="area2">放大 2 倍</button>
+                            <button class="preset-chip" data-preset-c4="area-neg">空间翻转 (Det &lt; 0)</button>
+                            <button class="preset-chip" data-preset-c4="area0">维度崩塌 (Det = 0)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="4">
+                            <div class="app-case-card-title">
+                                🎮 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>背面消隐 (Backface Culling)</b>：为了节省显卡算力，渲染引擎会计算每个多边形的行列式以确定其法线朝向。如果三角形在屏幕投影下的行列式 $\det(A) < 0$（表明其面向屏幕后方），GPU 会直接丢弃该面片不予渲染。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布上会高亮显示一个<b>三角形面片及法线</b>。通过拖动网格使行列式变为负数（镜像翻转）时，法线会倒转，面片从绿色（可见）变为红色并触发消隐警报。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：渲染三角形法线定向、右手螺旋法则
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 5：基底变换 -->
+                <div class="panel chapter-panel" id="panel-chapter-5" style="display: none;">
+                    <div class="panel-title">基底变换与过渡矩阵</div>
+                    <p class="theory-text">
+                        我们可以用一组非标准基底 $\vec{v}_1, \vec{v}_2$（斜网格）来描述向量。过渡矩阵 $P = [\vec{v}_1, \vec{v}_2]$ 将新坐标映射为标准坐标：$\vec{x}_{std} = P\vec{x}_{new}$。
+                    </p>
+                    <div class="control-group">
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom: 2px;">新基底 v1 & v2 坐标 (可在画布直接拖拽端点):</div>
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><label>v1.x</label><input type="number" id="basis-v1x" step="0.1" value="2.0"></div>
+                            <div class="matrix-input-cell"><label>v2.x</label><input type="number" id="basis-v2x" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><label>v1.y</label><input type="number" id="basis-v1y" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><label>v2.y</label><input type="number" id="basis-v2y" step="0.1" value="1.5"></div>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line">
+                                <span>向量标准坐标 x_std: </span>
+                                <div class="css-matrix" style="color: var(--color-w);"><div class="matrix-content matrix-2x1" id="basis-formula-xstd"><!-- dynamic --></div></div>
+                            </div>
+                            <div class="math-line" style="margin-top: 6px;">
+                                <span>新基底坐标 x_new (P⁻¹ x_std):</span>
+                            </div>
+                            <div class="math-line" style="justify-content: center; font-size:13px; font-weight:bold;">
+                                <div class="css-matrix" style="color: var(--color-basis);"><div class="matrix-content matrix-2x1" id="basis-formula-xnew"><!-- dynamic --></div></div>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c5="skew">斜角坐标系</button>
+                            <button class="preset-chip" data-preset-c5="ortho">正交伸缩坐标系</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="5">
+                            <div class="app-case-card-title">
+                                🎬 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>3D 摄像机视口变换 (View Matrix)</b>：在渲染中，模型顶点最初位于世界空间下（以世界坐标系为基底）。为了从相机视角渲染，需要使用基底过渡矩阵 $P^{-1}$，将所有物体的世界坐标转换到以摄像机为原点、镜头方向为基向量的摄像机本地空间（新基底）。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布上将渲染一个<b>摄像机视锥</b>，显示摄像机本地视场。此时拖动自定义基底或向量，即可观察其如何映射到摄像机基底下的局部坐标值。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：世界坐标到相机空间变换、法线贴图空间转换
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 6：线性方程 -->
+                <div class="panel chapter-panel" id="panel-chapter-6" style="display: none;">
+                    <div class="panel-title">线性方程组与投影空间</div>
+                    <p class="theory-text">
+                        求解 $A\vec{x} = \vec{b}$。若矩阵 $A$ 满秩，有唯一解 $\vec{x} = A^{-1}\vec{b}$。若 $\det(A) = 0$，则只有当 $\vec{b}$ 落在列空间时才有无穷多解，否则无解（展示其向列空间的最小二乘投影）。
+                    </p>
+                    <div class="control-group">
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom: 2px;">系数矩阵 A:</div>
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><input type="number" id="eq-mat-a" step="0.1" value="1.5"></div>
+                            <div class="matrix-input-cell"><input type="number" id="eq-mat-b" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><input type="number" id="eq-mat-c" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><input type="number" id="eq-mat-d" step="0.1" value="1.0"></div>
+                        </div>
+                        <div class="btn-grid">
+                            <button class="btn btn-primary" id="btn-eq-animate">播放映射动画 (x → b)</button>
+                            <button class="btn btn-secondary" id="btn-eq-reset">还原</button>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line" id="eq-solution-display">
+                                <!-- dynamic content -->
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c6="invertible">满秩可逆 (唯一解)</button>
+                            <button class="preset-chip" data-preset-c6="collapse">不可逆 (维度塌缩/最小二乘投影)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="6">
+                            <div class="app-case-card-title">
+                                🎮 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>物理引擎碰撞约束求解 (Physics Solver)</b>：当游戏中的布料、刚体发生碰撞时，物理引擎会将所有的速度、位置约束组合成庞大的方程组 $A\vec{x} = \vec{b}$ 实时求解出接触冲量。如果发生塌缩（无唯一解），最小二乘投影算法可求出最佳近似解，保证游戏不崩溃。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片并切换至“不可逆”预设，拖动目标向量 $\vec{b}$。画布上将渲染一条绿色的<b>最小二乘弹簧拉力线</b>，拉着无法触及的 $\vec{b}$ 垂直投影至列空间获得最优解 $\vec{x}^*$。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：雅可比冲量约束求解、投影近似法
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 7：特征椭圆 -->
+                <div class="panel chapter-panel" id="panel-chapter-7" style="display: none;">
+                    <div class="panel-title">二次型与特征值椭圆</div>
+                    <p class="theory-text">
+                        矩阵 $A$ 会把单位圆映射为椭圆（与二次型 $x^T A x = c$ 相关）。椭圆的<b>半长轴与半短轴</b>对应的就是 $A$ 的特征向量方向，轴的拉伸倍数为特征值。
+                    </p>
+                    <div class="control-group">
+                        <div class="matrix-input-grid">
+                            <div class="matrix-input-cell"><input type="number" id="ell-mat-a" step="0.1" value="2.0"></div>
+                            <div class="matrix-input-cell"><input type="number" id="ell-mat-b" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><input type="number" id="ell-mat-c" step="0.1" value="0.5"></div>
+                            <div class="matrix-input-cell"><input type="number" id="ell-mat-d" step="0.1" value="1.0"></div>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line"><span>椭圆主轴拉伸倍数(特征值):</span></div>
+                            <div class="math-line" id="ell-eigen-display" style="flex-direction:column; align-items:flex-start; gap:4px; font-size:11.5px; color: var(--color-eigen);">
+                                <!-- dynamic -->
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c7="symmetric">对称矩阵 (正交主轴)</button>
+                            <button class="preset-chip" data-preset-c7="unsymmetric">非对称矩阵 (非正交)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="7">
+                            <div class="app-case-card-title">
+                                🎬 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>方向包围盒 (Oriented Bounding Box)</b>：在游戏物理检测中，为了判断复杂形状的角色是否相撞，会将角色顶点拟合出协方差矩阵，求解其特征值与特征向量，从而自动绘制一个最紧密贴合且随角色旋转的 **OBB 碰撞包围盒**。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，画布中央将生成一簇星点点云。拖动或修改变换矩阵，星群外部会自动包裹一个<b>旋转的方向碰撞包围盒 (OBB Box)</b>，其长短轴会自动对准特征向量方向。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：PCA (主成分分析) 包围盒拟合、协方差特征对
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节 8：3D 变换 -->
+                <div class="panel chapter-panel" id="panel-chapter-8" style="display: none;">
+                    <div class="panel-title">3D空间与三阶矩阵变换</div>
+                    <p class="theory-text">
+                        在三维空间中，线性变换由 $3 \times 3$ 矩阵表示。我们将标准立方体变换为平行六面体。其<b>行列式代表六面体的体积缩放倍数</b>。
+                    </p>
+                    <div class="control-group">
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom: 2px;">3x3 变换矩阵 M:</div>
+                        <div class="matrix3d-input-grid">
+                            <input type="number" id="m3d-11" step="0.1" value="1.2" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-12" step="0.1" value="0.2" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-13" step="0.1" value="0.0" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            
+                            <input type="number" id="m3d-21" step="0.1" value="0.2" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-22" step="0.1" value="1.0" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-23" step="0.1" value="0.5" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            
+                            <input type="number" id="m3d-31" step="0.1" value="0.0" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-32" step="0.1" value="0.0" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                            <input type="number" id="m3d-33" step="0.1" value="0.8" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-light); padding:5px; border-radius:4px; text-align:center; font-family:var(--font-mono); font-size:11px;">
+                        </div>
+                        <div class="btn-grid">
+                            <button class="btn btn-primary" id="btn-3d-animate">播放 3D 变换</button>
+                            <button class="btn btn-secondary" id="btn-3d-reset">还原</button>
+                        </div>
+                        <div class="math-display">
+                            <div class="math-line" style="font-size:11px;">
+                                <span>3D 行列式 det(M) = </span>
+                                <span id="m3d-det-val" style="color:var(--color-i); font-weight:bold;">0.96</span>
+                            </div>
+                        </div>
+                        <div class="preset-list">
+                            <button class="preset-chip active" data-preset-c8="shear3d">3D 切变 (Shear)</button>
+                            <button class="preset-chip" data-preset-c8="rot3d">3D 绕 Z 轴旋转</button>
+                            <button class="preset-chip" data-preset-c8="proj3d">3D 投影到 XY 面 (det=0)</button>
+                        </div>
+                        <div class="app-case-card" data-case-chapter="8">
+                            <div class="app-case-card-title">
+                                🎮 影视与游戏实际应用
+                            </div>
+                            <div class="app-case-card-text">
+                                <b>3D 光栅化渲染与画家算法 (Painter's Algorithm)</b>：在 3D 渲染管线中，渲染半透明物体（如水面、火焰粒子）时，显卡必须计算每个面片与摄像机的距离（平均深度 $Z$ 值）并从后向前进行排序绘制，以防止出现透明面片遮挡顺序穿帮的现象。
+                            </div>
+                            <div class="app-case-card-text" style="font-size: 10.5px; color: #38bdf8;">
+                                💡 <b>交互体验</b>：鼠标悬停此卡片，三维平行六面体上将引出通往摄像机的视线，并实时标注出 6 个面当前的<b>画家排序深度 Z 值</b>。在画布上按住左键旋转 3D 视角，可见深度值与绘制顺序实时变化。
+                            </div>
+                            <div class="app-case-card-tech">
+                                ⚙️ 核心技术：三维深度投影计算、面深度拓扑排序
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 通用控制 -->
+                <div class="panel">
+                    <div class="panel-title" style="border-color: var(--text-secondary);">通用控制与状态</div>
+                    <div class="control-group">
+                        <div class="status-item">
+                            <span class="status-title">网格比例尺:</span>
+                            <span class="status-value" id="status-zoom">100%</span>
+                        </div>
+                        <div class="btn-grid">
+                            <button class="btn" id="btn-zoom-in">放大 (+)</button>
+                            <button class="btn" id="btn-zoom-out">缩小 (-)</button>
+                        </div>
+                        <button class="btn btn-secondary" style="width: 100%;" id="btn-reset-pan">重置原点及视场</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 画布视口 -->
+        <main class="canvas-container">
+            <canvas id="main-canvas"></canvas>
+
+            <!-- 操作提示，根据 2D/3D 模式变化 -->
+            <div class="drag-tip" id="drag-tip-text">提示：拖动向量端点进行改变，或拖动空白处平移原点</div>
+
+            <!-- 状态卡 -->
+            <div class="status-overlay">
+                <div class="status-item">
+                    <span class="status-title">当前章节:</span>
+                    <span class="status-value" id="status-chapter" style="color: var(--color-i);">1. 向量组合</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-title">行列式/缩放:</span>
+                    <span class="status-value" id="status-det">1.00</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-title">状态标志:</span>
+                    <span class="status-badge badge-positive" id="status-orientation">正常</span>
+                </div>
+            </div>
+
+            <!-- 浮动操作栏 -->
+            <div class="viewport-controls">
+                <button class="viewport-btn" id="vp-btn-play" title="播放当前章节变换动画">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </button>
+                <button class="viewport-btn" id="vp-btn-pause" title="快速复原网格">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+                </button>
+                <button class="viewport-btn" id="vp-btn-zoom-in" title="放大"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+                <button class="viewport-btn" id="vp-btn-zoom-out" title="缩小"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+            </div>
+
+            <!-- 通知 -->
+            <div class="toast-container" id="toast-box"></div>
+        </main>
+    </div>
+
+    <!-- 自检模态框 -->
+    <div class="modal-overlay" id="modal-bg"></div>
+    <div class="test-report-modal" id="test-modal">
+        <div class="test-report-header">
+            <h3>系统数学引擎自检报告</h3>
+            <button class="btn btn-secondary" style="padding: 4px 8px;" id="btn-close-test">关闭</button>
+        </div>
+        <div class="test-report-body" id="test-output"></div>
+    </div>
+
+    <script>
+        // DOM 工具
+        function $(id) { return document.getElementById(id); }
+        function updateText(id, text) { const el = $(id); if (el) el.textContent = text; }
+
+        /**
+         * ----------------------------------------------------
+         * 线性代数 2D/3D 数学基础类
+         * ----------------------------------------------------
+         */
+        class Vector2 {
+            constructor(x = 0, y = 0) { this.x = Number(x); this.y = Number(y); }
+            clone() { return new Vector2(this.x, this.y); }
+            set(x, y) { this.x = Number(x); this.y = Number(y); return this; }
+            add(v) { return new Vector2(this.x + v.x, this.y + v.y); }
+            scale(s) { return new Vector2(this.x * s, this.y * s); }
+            dot(v) { return this.x * v.x + this.y * v.y; }
+            length() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() { const l = this.length(); return l < 1e-9 ? new Vector2(0, 0) : new Vector2(this.x / l, this.y / l); }
+            distance(v) { return Math.sqrt((this.x - v.x) ** 2 + (this.y - v.y) ** 2); }
+            lerp(v, t) { return new Vector2(this.x + (v.x - this.x) * t, this.y + (v.y - this.y) * t); }
+        }
+
+        class Matrix2x2 {
+            constructor(a = 1, b = 0, c = 0, d = 1) {
+                this.a = Number(a); this.b = Number(b);
+                this.c = Number(c); this.d = Number(d);
+            }
+            set(a, b, c, d) { this.a = Number(a); this.b = Number(b); this.c = Number(c); this.d = Number(d); return this; }
+            det() { return this.a * this.d - this.b * this.c; }
+            multiplyVector(v) { return new Vector2(this.a * v.x + this.b * v.y, this.c * v.x + this.d * v.y); }
+            multiplyMatrix(m) {
+                return new Matrix2x2(
+                    this.a * m.a + this.b * m.c,  this.a * m.b + this.b * m.d,
+                    this.c * m.a + this.d * m.c,  this.c * m.b + this.d * m.d
+                );
+            }
+            inverse() {
+                const dt = this.det();
+                if (Math.abs(dt) < 1e-9) return null;
+                return new Matrix2x2(
+                    this.d / dt, -this.b / dt,
+                   -this.c / dt,  this.a / dt
+                );
+            }
+            solveEigen() {
+                const tr = this.a + this.d;
+                const de = this.det();
+                const disc = tr * tr - 4 * de;
+                if (disc < 0) return [];
+                const results = [];
+                if (disc > 1e-9) {
+                    const l1 = (tr + Math.sqrt(disc)) / 2;
+                    const l2 = (tr - Math.sqrt(disc)) / 2;
+                    results.push({ val: l1, vec: this._findEigenvector(l1) });
+                    results.push({ val: l2, vec: this._findEigenvector(l2) });
+                } else {
+                    const l = tr / 2;
+                    results.push({ val: l, vec: this._findEigenvector(l) });
+                }
+                return results;
+            }
+            _findEigenvector(lambda) {
+                const m11 = this.a - lambda, m12 = this.b;
+                const m21 = this.c, m22 = this.d - lambda;
+                const r1 = m11 * m11 + m12 * m12;
+                const r2 = m21 * m21 + m22 * m22;
+                let ev = (r1 > r2 && r1 > 1e-9) ? new Vector2(-m12, m11) : (r2 > 1e-9 ? new Vector2(-m22, m21) : new Vector2(1, 0));
+                return ev.normalize();
+            }
+        }
+
+        // 3D 向量类
+        class Vector3 {
+            constructor(x = 0, y = 0, z = 0) { this.x = Number(x); this.y = Number(y); this.z = Number(z); }
+            set(x, y, z) { this.x = Number(x); this.y = Number(y); this.z = Number(z); return this; }
+            add(v) { return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z); }
+            scale(s) { return new Vector3(this.x * s, this.y * s, this.z * s); }
+            lerp(v, t) { return new Vector3(this.x + (v.x - this.x) * t, this.y + (v.y - this.y) * t, this.z + (v.z - this.z) * t); }
+        }
+
+        // 3D 矩阵类
+        class Matrix3x3 {
+            constructor(
+                m11=1, m12=0, m13=0,
+                m21=0, m22=1, m23=0,
+                m31=0, m32=0, m33=1
+            ) {
+                this.m11 = m11; this.m12 = m12; this.m13 = m13;
+                this.m21 = m21; this.m22 = m22; this.m23 = m23;
+                this.m31 = m31; this.m32 = m32; this.m33 = m33;
+            }
+            set(m11, m12, m13, m21, m22, m23, m31, m32, m33) {
+                this.m11 = m11; this.m12 = m12; this.m13 = m13;
+                this.m21 = m21; this.m22 = m22; this.m23 = m23;
+                this.m31 = m31; this.m32 = m32; this.m33 = m33;
+                return this;
+            }
+            multiplyVector(v) {
+                return new Vector3(
+                    this.m11 * v.x + this.m12 * v.y + this.m13 * v.z,
+                    this.m21 * v.x + this.m22 * v.y + this.m23 * v.z,
+                    this.m31 * v.x + this.m32 * v.y + this.m33 * v.z
+                );
+            }
+            det() {
+                return this.m11 * (this.m22 * this.m33 - this.m23 * this.m32) -
+                       this.m12 * (this.m21 * this.m33 - this.m23 * this.m31) +
+                       this.m13 * (this.m21 * this.m32 - this.m22 * this.m31);
+            }
+        }
+
+        /**
+         * ----------------------------------------------------
+         * 全局状态数据模型 (State Management)
+         * ----------------------------------------------------
+         */
+        const state = {
+            activeChapter: 1,
+
+            // Ch1 向量线性组合
+            u: new Vector2(2, 1),
+            v: new Vector2(-1, 2),
+            c: 1.0,
+            d: 1.0,
+            showSpan: false,
+
+            // Ch2 & Ch4 矩阵变换 & 行列式
+            matrix: new Matrix2x2(1, 1, 0, 1),
+
+            // Ch3 复合变换 (先B后A)
+            compA: new Matrix2x2(1, 1, 0, 1),
+            compB: new Matrix2x2(0.7, -0.7, 0.7, 0.7),
+
+            // Ch5 基底变换
+            basisV1: new Vector2(2, 0.5),
+            basisV2: new Vector2(0.5, 1.5),
+            basisVectorX: new Vector2(1.5, 2.0),
+
+            // Ch6 线性方程组 Ax = b
+            eqVectorB: new Vector2(2.0, 1.5),
+
+            // Ch8 3D变换数据
+            matrix3D: new Matrix3x3(1.2, 0.2, 0, 0.2, 1.0, 0.5, 0, 0, 0.8),
+            // 3D 旋转相机参数
+            yaw: -0.6,
+            pitch: 0.4,
+
+            // 渲染控制
+            zoom: 50, // 2D 比例尺
+            zoom3D: 40, // 3D 比例尺
+            panOffset: new Vector2(0, 0),
+            panStart: new Vector2(0, 0),
+            isPanning: false,
+            isRotating3D: false,
+
+            // 动画状态机 (对于 Ch3 可以运行在 [0, 2] 代表两阶段动画)
+            animT: 1.0,
+            targetAnimT: 1.0,
+            animIsPlaying: false,
+            lastFrameTime: 0,
+
+            // 拖拽目标
+            dragStartPos: new Vector2(0,0),
+            gridLimit: 12,
+            hoveredCase: null
+        };
+
+        /**
+         * ----------------------------------------------------
+         * 2D/3D 混合 Canvas 渲染引擎 (Visual Engine)
+         * ----------------------------------------------------
+         */
+        class WebRenderer {
+            constructor(canvasId) {
+                this.canvas = $(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2;
+            }
+
+            // 2D 变换映射
+            mathToScreen(mathVec) {
+                const screenX = this.centerX + state.panOffset.x + mathVec.x * state.zoom;
+                const screenY = this.centerY + state.panOffset.y - mathVec.y * state.zoom;
+                return new Vector2(screenX, screenY);
+            }
+
+            screenToMath(screenVec) {
+                const mathX = (screenVec.x - this.centerX - state.panOffset.x) / state.zoom;
+                const mathY = (this.centerY + state.panOffset.y - screenVec.y) / state.zoom;
+                return new Vector2(mathX, mathY);
+            }
+
+            // 3D 正交投影映射
+            project3D(v3) {
+                // 1. 绕 Y 轴旋转 (Yaw)
+                const x1 = v3.x * Math.cos(state.yaw) - v3.z * Math.sin(state.yaw);
+                const z1 = v3.x * Math.sin(state.yaw) + v3.z * Math.cos(state.yaw);
+                // 2. 绕 X 轴旋转 (Pitch)
+                const y2 = v3.y * Math.cos(state.pitch) - z1 * Math.sin(state.pitch);
+                const z2 = v3.y * Math.sin(state.pitch) + z1 * Math.cos(state.pitch); // 渲染深度
+                
+                // 3. 正交投射屏幕
+                const screenX = this.centerX + state.panOffset.x + x1 * state.zoom3D;
+                const screenY = this.centerY + state.panOffset.y - y2 * state.zoom3D;
+                return { pos: new Vector2(screenX, screenY), depth: z2 };
+            }
+
+            draw() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 绘制背景暗光晕
+                const grad = ctx.createRadialGradient(
+                    this.centerX + state.panOffset.x, this.centerY + state.panOffset.y, 10,
+                    this.centerX + state.panOffset.x, this.centerY + state.panOffset.y, Math.max(this.canvas.width, this.canvas.height) * 0.8
+                );
+                grad.addColorStop(0, '#121d33');
+                grad.addColorStop(1, '#05080f');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (state.activeChapter !== 8) {
+                    // --- 2D 绘图体系 ---
+                    this.draw2DSpace();
+                } else {
+                    // --- 3D WebGL级纯画布投影绘图体系 ---
+                    this.draw3DSpace();
+                }
+            }
+
+            draw2DSpace() {
+                const ctx = this.ctx;
+                const ch = state.activeChapter;
+
+                // 1. 绘制张成空间 (Ch 1)
+                if (ch === 1 && state.showSpan) {
+                    this.drawSpanGrid();
+                }
+
+                // 2. 绘制基底变换新坐标网格 (Ch 5)
+                if (ch === 5) {
+                    this.drawBasisGrid();
+                }
+
+                // 3. 绘制插值变换坐标系
+                if (ch !== 1 && ch !== 5) {
+                    this.drawMorphedGrid();
+                } else if (ch === 1) {
+                    this.drawStandardGrid();
+                }
+
+                // 4. 绘制坐标主轴
+                this.drawAxes2D();
+
+                // 5. 行列式面积平行四边形 (Ch 4)
+                if (ch === 4) {
+                    this.drawDeterminantArea();
+                }
+
+                // 6. 二次型拉伸椭圆 (Ch 7)
+                if (ch === 7) {
+                    this.drawQuadraticEllipse();
+                }
+
+                // 7. 绘制特定章节几何体与向量
+                this.draw2DChapterElements();
+            }
+
+            // 绘制标准 2D 网格
+            drawStandardGrid() {
+                const ctx = this.ctx;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+                ctx.lineWidth = 1;
+                const limit = state.gridLimit;
+                for (let i = -limit; i <= limit; i++) {
+                    const p1 = this.mathToScreen(new Vector2(i, -limit));
+                    const p2 = this.mathToScreen(new Vector2(i, limit));
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+
+                    const p3 = this.mathToScreen(new Vector2(-limit, i));
+                    const p4 = this.mathToScreen(new Vector2(limit, i));
+                    ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+                }
+            }
+
+            // 绘制形变 2D 坐标网格
+            drawMorphedGrid() {
+                const ctx = this.ctx;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.06)';
+                ctx.lineWidth = 1;
+                const limit = state.gridLimit;
+
+                let curI, curJ;
+
+                if (state.activeChapter === 3) {
+                    // 复合变换双阶段动画插值逻辑
+                    // animT 范围 [0, 2]
+                    const t = state.animT;
+                    if (t <= 1.0) {
+                        // 阶段一：标准网格 -> 矩阵 B 变换下
+                        curI = new Vector2(1, 0).lerp(new Vector2(state.compB.a, state.compB.c), t);
+                        curJ = new Vector2(0, 1).lerp(new Vector2(state.compB.b, state.compB.d), t);
+                    } else {
+                        // 阶段二：矩阵 B 变换下 -> 复合矩阵 AB 变换下
+                        const s = t - 1.0;
+                        const matRes = state.compA.multiplyMatrix(state.compB);
+                        const iB = new Vector2(state.compB.a, state.compB.c);
+                        const jB = new Vector2(state.compB.b, state.compB.d);
+                        const iAB = new Vector2(matRes.a, matRes.c);
+                        const jAB = new Vector2(matRes.b, matRes.d);
+                        curI = iB.lerp(iAB, s);
+                        curJ = jB.lerp(jAB, s);
+                    }
+                } else {
+                    // 普通单矩阵变换插值
+                    const matrix = (state.activeChapter === 6) ? state.matrix : state.matrix;
+                    curI = new Vector2(1, 0).lerp(new Vector2(matrix.a, matrix.c), state.animT);
+                    curJ = new Vector2(0, 1).lerp(new Vector2(matrix.b, matrix.d), state.animT);
+                }
+
+                for (let x = -limit; x <= limit; x++) {
+                    const s = curI.scale(x).add(curJ.scale(-limit));
+                    const e = curI.scale(x).add(curJ.scale(limit));
+                    const ss = this.mathToScreen(s), se = this.mathToScreen(e);
+                    ctx.beginPath(); ctx.moveTo(ss.x, ss.y); ctx.lineTo(se.x, se.y); ctx.stroke();
+                }
+                for (let y = -limit; y <= limit; y++) {
+                    const s = curI.scale(-limit).add(curJ.scale(y));
+                    const e = curI.scale(limit).add(curJ.scale(y));
+                    const ss = this.mathToScreen(s), se = this.mathToScreen(e);
+                    ctx.beginPath(); ctx.moveTo(ss.x, ss.y); ctx.lineTo(se.x, se.y); ctx.stroke();
+                }
+            }
+
+            // 绘制两向量张成的网格 (Ch 1)
+            drawSpanGrid() {
+                const ctx = this.ctx;
+                const det = state.u.x * state.v.y - state.u.y * state.v.x;
+                const limit = 6;
+
+                if (Math.abs(det) < 0.05) {
+                    ctx.strokeStyle = 'rgba(251, 191, 36, 0.15)';
+                    ctx.lineWidth = 4;
+                    const dir = state.u.length() > 0.1 ? state.u.normalize() : state.v.normalize();
+                    if (dir.length() > 0.1) {
+                        const s = this.mathToScreen(dir.scale(-20)), e = this.mathToScreen(dir.scale(20));
+                        ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                    }
+                    return;
+                }
+
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.04)';
+                ctx.lineWidth = 1;
+                for (let c = -limit; c <= limit; c++) {
+                    const s = this.mathToScreen(state.u.scale(c).add(state.v.scale(-limit)));
+                    const e = this.mathToScreen(state.u.scale(c).add(state.v.scale(limit)));
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                }
+                for (let d = -limit; d <= limit; d++) {
+                    const s = this.mathToScreen(state.u.scale(-limit).add(state.v.scale(d)));
+                    const e = this.mathToScreen(state.u.scale(limit).add(state.v.scale(d)));
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                }
+            }
+
+            // 绘制自定义基底的紫色网格 (Ch 5)
+            drawBasisGrid() {
+                const ctx = this.ctx;
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.06)';
+                ctx.lineWidth = 1;
+                const limit = state.gridLimit;
+                for (let c = -limit; c <= limit; c++) {
+                    const s = this.mathToScreen(state.basisV1.scale(c).add(state.basisV2.scale(-limit)));
+                    const e = this.mathToScreen(state.basisV1.scale(c).add(state.basisV2.scale(limit)));
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                }
+                for (let d = -limit; d <= limit; d++) {
+                    const s = this.mathToScreen(state.basisV1.scale(-limit).add(state.basisV2.scale(d)));
+                    const e = this.mathToScreen(state.basisV1.scale(limit).add(state.basisV2.scale(d)));
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+                }
+            }
+
+            // 绘制2D坐标主轴
+            drawAxes2D() {
+                const ctx = this.ctx;
+                const origin = this.mathToScreen(new Vector2(0, 0));
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(this.canvas.width, origin.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, this.canvas.height); ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+
+                const step = 2;
+                const limit = state.gridLimit;
+                for (let i = -limit; i <= limit; i += step) {
+                    if (i === 0) continue;
+                    const spX = this.mathToScreen(new Vector2(i, 0));
+                    ctx.fillText(String(i), spX.x, spX.y + 6);
+                    ctx.beginPath(); ctx.moveTo(spX.x, spX.y - 3); ctx.lineTo(spX.x, spX.y + 3); ctx.stroke();
+
+                    const spY = this.mathToScreen(new Vector2(0, i));
+                    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                    ctx.fillText(String(i), spY.x - 8, spY.y);
+                    ctx.beginPath(); ctx.moveTo(spY.x - 3, spY.y); ctx.lineTo(spY.x + 3, spY.y); ctx.stroke();
+                    ctx.textAlign = 'center';
+                }
+            }
+
+            // 绘制行列式面积
+            drawDeterminantArea() {
+                const ctx = this.ctx;
+                const d = state.matrix.det();
+                const curI = new Vector2(1, 0).lerp(new Vector2(state.matrix.a, state.matrix.c), state.animT);
+                const curJ = new Vector2(0, 1).lerp(new Vector2(state.matrix.b, state.matrix.d), state.animT);
+                const curSum = curI.add(curJ);
+
+                const p0 = this.mathToScreen(new Vector2(0,0));
+                const p1 = this.mathToScreen(curI);
+                const p2 = this.mathToScreen(curSum);
+                const p3 = this.mathToScreen(curJ);
+
+                ctx.beginPath();
+                ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+                ctx.closePath();
+
+                ctx.fillStyle = d >= 0 ? 'var(--color-area-pos)' : 'var(--color-area-neg)';
+                ctx.fill();
+                ctx.strokeStyle = d >= 0 ? 'rgba(56, 189, 248, 0.5)' : 'rgba(244, 63, 94, 0.5)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            // 绘制二次型拉伸椭圆 (Ch 7)
+            drawQuadraticEllipse() {
+                const ctx = this.ctx;
+                const matrix = state.matrix; // 用第七章的数据，就是 matrix
+
+                // 绘制褪色的单位圆
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let a = 0; a <= Math.PI*2; a += 0.05) {
+                    const p = this.mathToScreen(new Vector2(Math.cos(a), Math.sin(a)));
+                    if (a === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.closePath(); ctx.stroke();
+
+                // 绘制变换后的椭圆线
+                ctx.strokeStyle = 'var(--color-basis)';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                for (let a = 0; a <= Math.PI*2 + 0.05; a += 0.05) {
+                    const u = new Vector2(Math.cos(a), Math.sin(a));
+                    const transformedU = matrix.multiplyVector(u);
+                    const p = this.mathToScreen(transformedU);
+                    if (a === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+
+                // 绘制特征向量基线
+                const eigResults = matrix.solveEigen();
+                ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 5]);
+                eigResults.forEach(res => {
+                    const spStart = this.mathToScreen(res.vec.scale(-15));
+                    const spEnd = this.mathToScreen(res.vec.scale(15));
+                    ctx.beginPath(); ctx.moveTo(spStart.x, spStart.y); ctx.lineTo(spEnd.x, spEnd.y); ctx.stroke();
+
+                    // 绘制拉伸后的特征向量
+                    const scaleVector = res.vec.scale(res.val);
+                    this.drawVector2D(new Vector2(0,0), scaleVector, 'var(--color-eigen)', `λ=${res.val.toFixed(2)}`, 3, true);
+                });
+                ctx.setLineDash([]);
+
+                // Ch 7 Case 互动：Oriented Bounding Box 点云与特征对齐包围盒
+                if (state.hoveredCase === 7) {
+                    const rawPts = [
+                        new Vector2(0.2, 0.4), new Vector2(-0.5, 0.2), new Vector2(0.3, -0.6),
+                        new Vector2(-0.1, -0.3), new Vector2(0.6, 0.1), new Vector2(-0.4, -0.5),
+                        new Vector2(0.1, 0.7), new Vector2(-0.7, -0.1), new Vector2(0.5, -0.3),
+                        new Vector2(-0.2, 0.5)
+                    ];
+                    const transPts = rawPts.map(pt => matrix.multiplyVector(pt));
+                    
+                    ctx.fillStyle = '#22d3ee';
+                    const sPts = transPts.map(pt => this.mathToScreen(pt));
+                    sPts.forEach(sPt => {
+                        ctx.beginPath(); ctx.arc(sPt.x, sPt.y, 3.5, 0, Math.PI*2); ctx.fill();
+                    });
+
+                    if (eigResults.length > 0) {
+                        const eVec = eigResults[0].vec;
+                        const eVec2 = new Vector2(-eVec.y, eVec.x);
+                        let minX = Infinity, maxX = -Infinity;
+                        let minY = Infinity, maxY = -Infinity;
+                        
+                        transPts.forEach(pt => {
+                            const xProj = pt.dot(eVec);
+                            const yProj = pt.dot(eVec2);
+                            minX = Math.min(minX, xProj);
+                            maxX = Math.max(maxX, xProj);
+                            minY = Math.min(minY, yProj);
+                            maxY = Math.max(maxY, yProj);
+                        });
+
+                        const pad = 0.08;
+                        minX -= pad; maxX += pad;
+                        minY -= pad; maxY += pad;
+
+                        const corners = [
+                            eVec.scale(minX).add(eVec2.scale(minY)),
+                            eVec.scale(maxX).add(eVec2.scale(minY)),
+                            eVec.scale(maxX).add(eVec2.scale(maxY)),
+                            eVec.scale(minX).add(eVec2.scale(maxY))
+                        ];
+                        const sCorners = corners.map(pt => this.mathToScreen(pt));
+
+                        ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(sCorners[0].x, sCorners[0].y);
+                        ctx.lineTo(sCorners[1].x, sCorners[1].y);
+                        ctx.lineTo(sCorners[2].x, sCorners[2].y);
+                        ctx.lineTo(sCorners[3].x, sCorners[3].y);
+                        ctx.closePath(); ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        ctx.fillText("方向碰撞包围盒 (OBB Box) 已对准特征轴", sCorners[2].x + 8, sCorners[2].y + 4);
+                    }
+                }
+            }
+
+            // 绘制带箭头的2D向量
+            drawVector2D(origin, vector, color, label, strokeWidth = 3, hasShadow = true) {
+                const ctx = this.ctx;
+                const start = this.mathToScreen(origin);
+                const end = this.mathToScreen(origin.add(vector));
+
+                if (hasShadow) {
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 8;
+                }
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = strokeWidth;
+                ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+                ctx.shadowBlur = 0; // 还原
+
+                const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                const arrowLength = 12;
+                const arrowAngle = Math.PI / 6;
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(end.x, end.y);
+                ctx.lineTo(end.x - arrowLength * Math.cos(angle - arrowAngle), end.y - arrowLength * Math.sin(angle - arrowAngle));
+                ctx.lineTo(end.x - arrowLength * Math.cos(angle + arrowAngle), end.y - arrowLength * Math.sin(angle + arrowAngle));
+                ctx.closePath(); ctx.fill();
+
+                if (label) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-display');
+                    ctx.fillText(label, end.x + 10 * Math.cos(angle), end.y + 10 * Math.sin(angle));
+                }
+            }
+
+            drawHandle2D(pos, color) {
+                const ctx = this.ctx;
+                const s = this.mathToScreen(pos);
+                ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI*2); ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.fill();
+                ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill();
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+            }
+
+            drawRoundedRect(x, y, width, height, radius, fill = true, stroke = false) {
+                const ctx = this.ctx;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                if (fill) ctx.fill();
+                if (stroke) ctx.stroke();
+            }
+
+            draw2DChapterElements() {
+                const ctx = this.ctx;
+                const zero = new Vector2(0, 0);
+                const ch = state.activeChapter;
+
+                if (ch === 1) {
+                    // u, v, w = c*u + d*v
+                    this.drawVector2D(zero, state.u, 'var(--color-u)', 'u');
+                    this.drawVector2D(zero, state.v, 'var(--color-v)', 'v');
+
+                    const cu = state.u.scale(state.c);
+                    const dv = state.v.scale(state.d);
+                    const w = cu.add(dv);
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+                    const pCu = this.mathToScreen(cu), pW = this.mathToScreen(w), pDv = this.mathToScreen(dv);
+                    ctx.beginPath(); ctx.moveTo(pCu.x, pCu.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(pDv.x, pDv.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    this.drawVector2D(zero, w, 'var(--color-w)', 'w = c·u + d·v', 4.5);
+                    this.drawHandle2D(state.u, 'var(--color-u)');
+                    this.drawHandle2D(state.v, 'var(--color-v)');
+
+                    // Ch 1 Case 互动：受重力/风力合成的弹道抛物线
+                    if (state.hoveredCase === 1) {
+                        const sZero = this.mathToScreen(zero);
+                        ctx.fillStyle = '#10b981';
+                        ctx.beginPath();
+                        ctx.arc(sZero.x, sZero.y, 12, Math.PI, 0); // 半圆炮台
+                        ctx.fill();
+                        
+                        const targetPos = new Vector2(3, 3);
+                        const sTarget = this.mathToScreen(targetPos);
+                        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(sTarget.x, sTarget.y, 14, 0, Math.PI*2); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(sTarget.x, sTarget.y, 6, 0, Math.PI*2); ctx.fillStyle = '#f59e0b'; ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '9px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        ctx.fillText("射击目标", sTarget.x - 18, sTarget.y - 18);
+
+                        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(sZero.x, sZero.y);
+                        const g = 0.8;
+                        for (let step = 1; step <= 20; step++) {
+                            const tVal = step * 0.15;
+                            const trajPt = new Vector2(w.x * tVal, w.y * tVal - 0.5 * g * tVal * tVal);
+                            const sTraj = this.mathToScreen(trajPt);
+                            ctx.lineTo(sTraj.x, sTraj.y);
+                        }
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        
+                        const muzzle = w.normalize().scale(0.8);
+                        const sMuzzle = this.mathToScreen(muzzle);
+                        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(sZero.x, sZero.y); ctx.lineTo(sMuzzle.x, sMuzzle.y); ctx.stroke();
+                    }
+                }
+                else if (ch === 2 || ch === 4) {
+                    const curI = new Vector2(1, 0).lerp(new Vector2(state.matrix.a, state.matrix.c), state.animT);
+                    const curJ = new Vector2(0, 1).lerp(new Vector2(state.matrix.b, state.matrix.d), state.animT);
+
+                    this.drawVector2D(zero, curI, 'var(--color-i)', "i'");
+                    this.drawVector2D(zero, curJ, 'var(--color-j)', "j'");
+
+                    if (!state.animIsPlaying) {
+                        this.drawHandle2D(new Vector2(state.matrix.a, state.matrix.c), 'var(--color-i)');
+                        this.drawHandle2D(new Vector2(state.matrix.b, state.matrix.d), 'var(--color-j)');
+                    }
+
+                    // Ch 2 Case 互动：战机 Sprite 的矩阵世界变换
+                    if (state.hoveredCase === 2) {
+                        const verts = [
+                            new Vector2(0, 1.2),
+                            new Vector2(-0.8, -0.6),
+                            new Vector2(0, -0.25),
+                            new Vector2(0.8, -0.6)
+                        ];
+                        const transVerts = verts.map(v => curI.scale(v.x).add(curJ.scale(v.y)));
+                        const screenPts = transVerts.map(v => this.mathToScreen(v));
+
+                        ctx.beginPath();
+                        ctx.moveTo(screenPts[0].x, screenPts[0].y);
+                        for (let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
+                        ctx.closePath();
+                        ctx.fillStyle = 'rgba(56, 189, 248, 0.18)'; ctx.fill();
+                        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.stroke();
+
+                        const engineLeft = transVerts[1];
+                        const engineRight = transVerts[3];
+                        const flameDir = curJ.scale(-0.4);
+                        const sEl = this.mathToScreen(engineLeft);
+                        const sEr = this.mathToScreen(engineRight);
+                        const sFl = this.mathToScreen(engineLeft.add(flameDir));
+                        const sFr = this.mathToScreen(engineRight.add(flameDir));
+
+                        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(sEl.x, sEl.y); ctx.lineTo(sFl.x, sFl.y); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(sEr.x, sEr.y); ctx.lineTo(sFr.x, sFr.y); ctx.stroke();
+                    }
+
+                    // Ch 4 Case 互动：背面三角形背面消隐消去演示
+                    if (state.hoveredCase === 4) {
+                        const p0 = new Vector2(0, 0);
+                        const tp1 = curI.scale(1.5).add(curJ.scale(0.5));
+                        const tp2 = curI.scale(0.5).add(curJ.scale(1.5));
+                        const cross = tp1.x * tp2.y - tp1.y * tp2.x;
+                        const isFront = cross >= 0;
+
+                        const sP0 = this.mathToScreen(p0);
+                        const sP1 = this.mathToScreen(tp1);
+                        const sP2 = this.mathToScreen(tp2);
+
+                        ctx.beginPath();
+                        ctx.moveTo(sP0.x, sP0.y); ctx.lineTo(sP1.x, sP1.y); ctx.lineTo(sP2.x, sP2.y);
+                        ctx.closePath();
+                        ctx.fillStyle = isFront ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'; ctx.fill();
+                        ctx.strokeStyle = isFront ? 'rgba(52, 211, 153, 0.5)' : 'rgba(239, 68, 68, 0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+                        const center = new Vector2((tp1.x + tp2.x)/3, (tp1.y + tp2.y)/3);
+                        const sCenter = this.mathToScreen(center);
+                        let normal = new Vector2(-tp1.y, tp1.x).normalize();
+                        if (!isFront) normal = normal.scale(-1);
+                        const normalEnd = center.add(normal.scale(0.8));
+                        const sNormalEnd = this.mathToScreen(normalEnd);
+
+                        ctx.strokeStyle = isFront ? '#34d399' : '#ef4444'; ctx.lineWidth = 2.5;
+                        ctx.beginPath(); ctx.moveTo(sCenter.x, sCenter.y); ctx.lineTo(sNormalEnd.x, sNormalEnd.y); ctx.stroke();
+
+                        const angle = Math.atan2(sNormalEnd.y - sCenter.y, sNormalEnd.x - sCenter.x);
+                        ctx.fillStyle = isFront ? '#34d399' : '#ef4444';
+                        ctx.beginPath();
+                        ctx.moveTo(sNormalEnd.x, sNormalEnd.y);
+                        ctx.lineTo(sNormalEnd.x - 6*Math.cos(angle-Math.PI/6), sNormalEnd.y - 6*Math.sin(angle-Math.PI/6));
+                        ctx.lineTo(sNormalEnd.x - 6*Math.cos(angle+Math.PI/6), sNormalEnd.y - 6*Math.sin(angle+Math.PI/6));
+                        ctx.closePath(); ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        ctx.fillText(isFront ? "正面 (法线朝向相机 - 渲染)" : "背面 (消隐剔除 - 忽略)", sNormalEnd.x + 8, sNormalEnd.y + 4);
+                    }
+                }
+                else if (ch === 3) {
+                    // 复合变换中间态向量渲染 i', j'
+                    let curI, curJ;
+                    const t = state.animT;
+                    if (t <= 1.0) {
+                        curI = new Vector2(1, 0).lerp(new Vector2(state.compB.a, state.compB.c), t);
+                        curJ = new Vector2(0, 1).lerp(new Vector2(state.compB.b, state.compB.d), t);
+                    } else {
+                        const s = t - 1.0;
+                        const matRes = state.compA.multiplyMatrix(state.compB);
+                        curI = new Vector2(state.compB.a, state.compB.c).lerp(new Vector2(matRes.a, matRes.c), s);
+                        curJ = new Vector2(state.compB.b, state.compB.d).lerp(new Vector2(matRes.b, matRes.d), s);
+                    }
+                    this.drawVector2D(zero, curI, 'var(--color-i)', "i'");
+                    this.drawVector2D(zero, curJ, 'var(--color-j)', "j'");
+
+                    // Ch 3 Case 互动：父子级骨骼多级机械臂
+                    if (state.hoveredCase === 3) {
+                        const base = new Vector2(3, -3);
+                        const joint1 = curI.scale(1.5);
+                        const elbow = base.add(joint1);
+                        const joint2 = curJ.scale(1.2);
+                        const hand = elbow.add(joint2);
+                        
+                        const sBase = this.mathToScreen(base);
+                        const sElbow = this.mathToScreen(elbow);
+                        const sHand = this.mathToScreen(hand);
+                        
+                        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(sBase.x, sBase.y);
+                        ctx.lineTo(sElbow.x, sElbow.y);
+                        ctx.lineTo(sHand.x, sHand.y);
+                        ctx.stroke();
+                        ctx.lineCap = 'butt';
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath(); ctx.arc(sBase.x, sBase.y, 6, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(sElbow.x, sElbow.y, 5, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = '#f59e0b';
+                        ctx.beginPath(); ctx.arc(sHand.x, sHand.y, 4, 0, Math.PI*2); ctx.fill();
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '9px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        ctx.fillText("肩 (Base)", sBase.x + 8, sBase.y + 4);
+                        ctx.fillText("肘 (Joint B)", sElbow.x + 8, sElbow.y + 4);
+                        ctx.fillText("手 (Joint A·B)", sHand.x + 8, sHand.y - 4);
+                    }
+                }
+                else if (ch === 5) {
+                    // 基底变换 v1, v2 以及向量 x
+                    this.drawVector2D(zero, state.basisV1, 'var(--color-basis)', 'v1', 3, false);
+                    this.drawVector2D(zero, state.basisV2, 'var(--color-basis)', 'v2', 3, false);
+
+                    // 绘制标准向量 x 
+                    this.drawVector2D(zero, state.basisVectorX, 'var(--color-w)', 'x');
+
+                    // 绘制新坐标映射虚线投影线 (v1/v2基底下的分量分解)
+                    const det = state.basisV1.x * state.basisV2.y - state.basisV1.y * state.basisV2.x;
+                    if (Math.abs(det) > 1e-5) {
+                        const pInv = new Matrix2x2(state.basisV1.x, state.basisV2.x, state.basisV1.y, state.basisV2.y).inverse();
+                        if (pInv) {
+                            const newX = pInv.multiplyVector(state.basisVectorX);
+                            const projV1 = state.basisV1.scale(newX.x);
+                            const projV2 = state.basisV2.scale(newX.y);
+
+                            ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+                            const spV1 = this.mathToScreen(projV1), spX = this.mathToScreen(state.basisVectorX);
+                            ctx.beginPath(); ctx.moveTo(spV1.x, spV1.y); ctx.lineTo(spX.x, spX.y); ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                    }
+
+                    this.drawHandle2D(state.basisV1, 'var(--color-basis)');
+                    this.drawHandle2D(state.basisV2, 'var(--color-basis)');
+                    this.drawHandle2D(state.basisVectorX, 'var(--color-w)');
+
+                    // Ch 5 Case 互动：摄像机视口变换与蓝色视锥 (Frustum)
+                    if (state.hoveredCase === 5) {
+                        const camPos = new Vector2(-4, -3);
+                        const angle = Math.atan2(state.basisV1.y, state.basisV1.x);
+                        
+                        // 绘制视锥
+                        const frustumLen = 4.5;
+                        const frustumAngle = 0.35; // 约 20 度
+                        const leftPt = camPos.add(new Vector2(Math.cos(angle - frustumAngle), Math.sin(angle - frustumAngle)).scale(frustumLen));
+                        const rightPt = camPos.add(new Vector2(Math.cos(angle + frustumAngle), Math.sin(angle + frustumAngle)).scale(frustumLen));
+                        
+                        const sCam = this.mathToScreen(camPos);
+                        const sLeft = this.mathToScreen(leftPt);
+                        const sRight = this.mathToScreen(rightPt);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(sCam.x, sCam.y);
+                        ctx.lineTo(sLeft.x, sLeft.y);
+                        ctx.lineTo(sRight.x, sRight.y);
+                        ctx.closePath();
+                        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        
+                        // 绘制 3D 摄像机图标
+                        ctx.save();
+                        ctx.translate(sCam.x, sCam.y);
+                        ctx.rotate(-angle);
+                        
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1.2;
+                        
+                        // 摄像机机身
+                        ctx.beginPath();
+                        ctx.rect(-12, -7, 16, 14);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        // 镜头
+                        ctx.beginPath();
+                        ctx.moveTo(4, -4);
+                        ctx.lineTo(10, -7);
+                        ctx.lineTo(10, 7);
+                        ctx.lineTo(4, 4);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        // 胶片盘 (双圆)
+                        ctx.beginPath();
+                        ctx.arc(-7, -11, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(1, -11, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        ctx.restore();
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '9px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        ctx.fillText("世界坐标系 -> 摄像机坐标系 (v1 方向)", sCam.x - 30, sCam.y + 24);
+                    }
+                }
+                else if (ch === 6) {
+                    // 线性方程组 Ax = b
+                    const det = state.matrix.det();
+                    const b = state.eqVectorB;
+
+                    this.drawVector2D(zero, b, 'var(--color-w)', 'b');
+
+                    if (Math.abs(det) > 1e-4) {
+                        // 满秩：有唯一解 x = A⁻¹ b
+                        const inv = state.matrix.inverse();
+                        if (inv) {
+                            const x = inv.multiplyVector(b);
+                            const curX = x.lerp(b, state.animT); // 动画：从解 x 逐步映射到目标 b
+
+                            this.drawVector2D(zero, x, 'rgba(52, 211, 153, 0.35)', 'x (解)', 2, false);
+                            if (state.animIsPlaying) {
+                                this.drawVector2D(zero, curX, 'var(--color-j)', "x_t");
+                            }
+                            this.drawHandle2D(b, 'var(--color-w)');
+                        }
+                    } else {
+                        // 不可逆维度塌缩情况：绘制列空间和最小二乘投影
+                        const a = state.matrix.a, bCol = state.matrix.b, c = state.matrix.c, d = state.matrix.d;
+                        // 求解列空间方向向量
+                        let colDir = (a*a + c*c > bCol*bCol + d*d) ? new Vector2(a, c) : new Vector2(bCol, d);
+                        colDir = colDir.normalize();
+
+                        if (colDir.length() > 0.1) {
+                            // 绘制列空间直线
+                            ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+                            const spStart = this.mathToScreen(colDir.scale(-15)), spEnd = this.mathToScreen(colDir.scale(15));
+                            ctx.beginPath(); ctx.moveTo(spStart.x, spStart.y); ctx.lineTo(spEnd.x, spEnd.y); ctx.stroke();
+                            ctx.setLineDash([]);
+
+                            // 计算投影 b' = (b · colDir)colDir
+                            const projectionScalar = b.dot(colDir);
+                            const bPrime = colDir.scale(projectionScalar);
+                            
+                            // 绘制误差投影垂直线 e = b - b'
+                            const spB = this.mathToScreen(b), spBPrime = this.mathToScreen(bPrime);
+                            if (state.hoveredCase === 6) {
+                                // 绘制绿色弹簧线表示最小二乘投影误差
+                                const dx = spBPrime.x - spB.x;
+                                const dy = spBPrime.y - spB.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > 5) {
+                                    const ux = dx / dist;
+                                    const uy = dy / dist;
+                                    const nx = -uy;
+                                    const ny = ux;
+                                    const numCoils = 10;
+                                    const coilWidth = 6;
+                                    ctx.strokeStyle = '#34d399';
+                                    ctx.lineWidth = 2;
+                                    ctx.beginPath();
+                                    ctx.moveTo(spB.x, spB.y);
+                                    for (let i = 0; i <= numCoils; i++) {
+                                        const t = i / numCoils;
+                                        const px = spB.x + dx * t;
+                                        const py = spB.y + dy * t;
+                                        if (i > 0 && i < numCoils) {
+                                            const offset = (i % 2 === 0 ? 1 : -1) * coilWidth;
+                                            ctx.lineTo(px + nx * offset, py + ny * offset);
+                                        } else {
+                                            ctx.lineTo(px, py);
+                                        }
+                                    }
+                                    ctx.stroke();
+                                    
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.font = '9px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                                    ctx.fillText("最小二乘物理弹簧约束 (误差 e)", (spB.x + spBPrime.x)/2 + 10, (spB.y + spBPrime.y)/2);
+                                } else {
+                                    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 1.5;
+                                    ctx.beginPath(); ctx.moveTo(spB.x, spB.y); ctx.lineTo(spBPrime.x, spBPrime.y); ctx.stroke();
+                                }
+                            } else {
+                                // 默认非悬停时绘制普通红色虚线
+                                ctx.strokeStyle = 'rgba(244, 63, 94, 0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 2]);
+                                ctx.beginPath(); ctx.moveTo(spB.x, spB.y); ctx.lineTo(spBPrime.x, spBPrime.y); ctx.stroke();
+                                ctx.setLineDash([]);
+                            }
+
+                            this.drawVector2D(zero, bPrime, 'rgba(56, 189, 248, 0.65)', "b' (投影)", 2, false);
+
+                            // 求解最小二乘解 Ax* = b'
+                            // 我们取一个特解，高亮绘制对应的零空间 Nullspace 直线
+                            let xStar = new Vector2(0, 0);
+                            const col1Len = a*a + c*c;
+                            const col2Len = bCol*bCol + d*d;
+                            if (col1Len > 1e-4) {
+                                const sVal = bPrime.dot(new Vector2(a, c)) / col1Len;
+                                xStar.set(sVal, 0);
+                            } else if (col2Len > 1e-4) {
+                                const sVal = bPrime.dot(new Vector2(bCol, d)) / col2Len;
+                                xStar.set(0, sVal);
+                            }
+
+                            this.drawVector2D(zero, xStar, 'var(--color-j)', 'x* (最小二乘解)', 2.5);
+
+                            // 绘制零空间 Nullspace 线 (Ax = 0)
+                            // n 是与行向量正交的向量
+                            let n = (a*a + bCol*bCol > c*c + d*d) ? new Vector2(-bCol, a) : new Vector2(-d, c);
+                            n = n.normalize();
+                            if (n.length() > 0.1) {
+                                ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+                                // 零空间通过 xStar 的偏移解集线
+                                const spSolStart = this.mathToScreen(xStar.add(n.scale(-15)));
+                                const spSolEnd = this.mathToScreen(xStar.add(n.scale(15)));
+                                ctx.beginPath(); ctx.moveTo(spSolStart.x, spSolStart.y); ctx.lineTo(spSolEnd.x, spSolEnd.y); ctx.stroke();
+                                ctx.setLineDash([]);
+                            }
+                        }
+                        this.drawHandle2D(b, 'var(--color-w)');
+                    }
+                }
+            }
+
+            // --- 3D 渲染核心算法 ---
+            draw3DSpace() {
+                const ctx = this.ctx;
+                const matrix = state.matrix3D;
+                const limit = 4; // 3D 网格精度限制，防止杂乱
+
+                // 1. 绘制三维标准对角参考坐标轴（虚线褪色）
+                const originProj = this.project3D(new Vector3(0,0,0));
+                
+                const axes = [
+                    { dir: new Vector3(5, 0, 0), color: 'rgba(244, 63, 94, 0.35)', label: 'X' },  // X-红
+                    { dir: new Vector3(0, 5, 0), color: 'rgba(52, 211, 153, 0.35)', label: 'Y' },  // Y-绿
+                    { dir: new Vector3(0, 0, 5), color: 'rgba(56, 189, 248, 0.35)', label: 'Z' }   // Z-蓝
+                ];
+
+                ctx.lineWidth = 1;
+                axes.forEach(axis => {
+                    const endProj = this.project3D(axis.dir);
+                    const startProj = this.project3D(axis.dir.scale(-1));
+                    ctx.strokeStyle = axis.color;
+                    ctx.beginPath();
+                    ctx.moveTo(startProj.pos.x, startProj.pos.y);
+                    ctx.lineTo(endProj.pos.x, endProj.pos.y);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = axis.color;
+                    ctx.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                    ctx.fillText(axis.label, endProj.pos.x + 4, endProj.pos.y - 4);
+                });
+
+                // 2. 绘制插值变换后的三维斜网格线 (只在三个主切面上绘制网格，便于认清空间深度)
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+                ctx.lineWidth = 1;
+                
+                const curI = new Vector3(1, 0, 0).lerp(new Vector3(matrix.m11, matrix.m21, matrix.m31), state.animT);
+                const curJ = new Vector3(0, 1, 0).lerp(new Vector3(matrix.m12, matrix.m22, matrix.m32), state.animT);
+                const curK = new Vector3(0, 0, 1).lerp(new Vector3(matrix.m13, matrix.m23, matrix.m33), state.animT);
+
+                // XY 变换面网格
+                for (let x = -limit; x <= limit; x++) {
+                    const s = curI.scale(x).add(curJ.scale(-limit));
+                    const e = curI.scale(x).add(curJ.scale(limit));
+                    const spS = this.project3D(s).pos, spE = this.project3D(e).pos;
+                    ctx.beginPath(); ctx.moveTo(spS.x, spS.y); ctx.lineTo(spE.x, spE.y); ctx.stroke();
+                }
+                for (let y = -limit; y <= limit; y++) {
+                    const s = curI.scale(-limit).add(curJ.scale(y));
+                    const e = curI.scale(limit).add(curJ.scale(y));
+                    const spS = this.project3D(s).pos, spE = this.project3D(e).pos;
+                    ctx.beginPath(); ctx.moveTo(spS.x, spS.y); ctx.lineTo(spE.x, spE.y); ctx.stroke();
+                }
+
+                // 3. 绘制代表3D行列式体积缩放的平行六面体 (3D Parallelepiped)
+                // 8个顶点：
+                const v0 = new Vector3(0, 0, 0);
+                const v1 = curI;
+                const v2 = curJ;
+                const v3 = curK;
+                const v4 = curI.add(curJ);
+                const v5 = curI.add(curK);
+                const v6 = curJ.add(curK);
+                const v7 = curI.add(curJ).add(curK);
+
+                // 6个面的顶点构成定义
+                const faces = [
+                    { indices: [0, 1, 4, 2], name: 'XY-底面' },
+                    { indices: [0, 1, 5, 3], name: 'XZ-前侧面' },
+                    { indices: [0, 2, 6, 3], name: 'YZ-左侧面' },
+                    { indices: [3, 5, 7, 6], name: 'XY-顶面' },
+                    { indices: [2, 4, 7, 6], name: 'XZ-后侧面' },
+                    { indices: [1, 4, 7, 5], name: 'YZ-右侧面' }
+                ];
+                const vertices = [v0, v1, v2, v3, v4, v5, v6, v7];
+
+                // 数学计算各个面在三维旋转后的平均深度 Z2，用于画家算法排序
+                const facesWithDepth = faces.map(f => {
+                    const projectedVerts = f.indices.map(idx => this.project3D(vertices[idx]));
+                    const avgDepth = projectedVerts.reduce((sum, pv) => sum + pv.depth, 0) / 4;
+                    return { face: f, proj: projectedVerts, depth: avgDepth };
+                });
+
+                // 画家算法核心：按深度从远到近排序 (depth从小到大，即先画深度更小/更远的)
+                facesWithDepth.sort((a, b) => a.depth - b.depth);
+
+                const detVal = matrix.det();
+                const faceColor = detVal >= 0 ? 'var(--color-area-pos)' : 'var(--color-area-neg)';
+                const faceStroke = detVal >= 0 ? 'rgba(56, 189, 248, 0.4)' : 'rgba(244, 63, 94, 0.4)';
+
+                facesWithDepth.forEach(fd => {
+                    ctx.beginPath();
+                    ctx.moveTo(fd.proj[0].pos.x, fd.proj[0].pos.y);
+                    ctx.lineTo(fd.proj[1].pos.x, fd.proj[1].pos.y);
+                    ctx.lineTo(fd.proj[2].pos.x, fd.proj[2].pos.y);
+                    ctx.lineTo(fd.proj[3].pos.x, fd.proj[3].pos.y);
+                    ctx.closePath();
+                    
+                    ctx.fillStyle = faceColor;
+                    ctx.fill();
+                    ctx.strokeStyle = faceStroke;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+
+                // 4. 绘制变换后的3D基向量
+                this.drawVector3D(new Vector3(0,0,0), curI, 'var(--color-i)', "i'", 3);
+                this.drawVector3D(new Vector3(0,0,0), curJ, 'var(--color-j)', "j'", 3);
+                this.drawVector3D(new Vector3(0,0,0), curK, 'var(--color-k)', "k'", 3);
+
+                // Ch 8 Case 互动：3D 面深度指示线与 Z-Depth 画家算法排序标签
+                if (state.hoveredCase === 8) {
+                    facesWithDepth.forEach((fd, idx) => {
+                        // 1. 计算面中心点 (3D)
+                        const c3d = vertices[fd.face.indices[0]]
+                            .add(vertices[fd.face.indices[1]])
+                            .add(vertices[fd.face.indices[2]])
+                            .add(vertices[fd.face.indices[3]])
+                            .scale(0.25);
+                        
+                        // 2. 投影到 2D 屏幕
+                        const cProj = this.project3D(c3d);
+                        
+                        // 3. 绘制从原点到面中心的虚线
+                        ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)'; // Amber yellow
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(originProj.pos.x, originProj.pos.y);
+                        ctx.lineTo(cProj.pos.x, cProj.pos.y);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        
+                        // 4. 绘制面中心的小黄圆点
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.beginPath();
+                        ctx.arc(cProj.pos.x, cProj.pos.y, 3.5, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        // 5. 绘制圆角矩形标签 bg
+                        const labelText = `#${idx + 1} ${fd.face.name} (Z:${fd.depth.toFixed(2)})`;
+                        ctx.font = '9px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                        const textWidth = ctx.measureText(labelText).width;
+                        const rectW = textWidth + 12;
+                        const rectH = 16;
+                        // 稍微偏离中心，往上偏 22px，左右居中
+                        const rectX = cProj.pos.x - rectW / 2;
+                        const rectY = cProj.pos.y - 22;
+                        
+                        // 绘制圆角矩形
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                        ctx.strokeStyle = '#fbbf24';
+                        ctx.lineWidth = 1;
+                        this.drawRoundedRect(rectX, rectY, rectW, rectH, 3, true, true);
+                        
+                        // 绘制文本
+                        ctx.fillStyle = '#ffffff';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(labelText, rectX + 6, rectY + rectH / 2);
+                    });
+                    ctx.textBaseline = 'alphabetic'; // 还原 baseline
+                }
+            }
+
+            // 3D 空间投射绘制向量方法
+            drawVector3D(origin, vector, color, label, strokeWidth = 2.5) {
+                const ctx = this.ctx;
+                const startProj = this.project3D(origin);
+                const endProj = this.project3D(origin.add(vector));
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = strokeWidth;
+                ctx.beginPath();
+                ctx.moveTo(startProj.pos.x, startProj.pos.y);
+                ctx.lineTo(endProj.pos.x, endProj.pos.y);
+                ctx.stroke();
+
+                // 简单的3D小三角箭头
+                const angle = Math.atan2(endProj.pos.y - startProj.pos.y, endProj.pos.x - startProj.pos.x);
+                const arrowLength = 10;
+                const arrowAngle = Math.PI / 6;
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(endProj.pos.x, endProj.pos.y);
+                ctx.lineTo(endProj.pos.x - arrowLength * Math.cos(angle - arrowAngle), endProj.pos.y - arrowLength * Math.sin(angle - arrowAngle));
+                ctx.lineTo(endProj.pos.x - arrowLength * Math.cos(angle + arrowAngle), endProj.pos.y - arrowLength * Math.sin(angle + arrowAngle));
+                ctx.closePath(); ctx.fill();
+
+                if (label) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '11.5px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+                    ctx.fillText(label, endProj.pos.x + 8 * Math.cos(angle), endProj.pos.y + 8 * Math.sin(angle));
+                }
+            }
+        }
+
+        const renderer = new WebRenderer('main-canvas');
+
+        /**
+         * ----------------------------------------------------
+         * 动画引擎驱动环路 (Game Loop)
+         * ----------------------------------------------------
+         */
+        function animateLoop(timestamp) {
+            if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+            const delta = (timestamp - state.lastFrameTime) / 1000;
+            state.lastFrameTime = timestamp;
+
+            let needsRedraw = false;
+
+            if (state.animIsPlaying) {
+                const speed = 1.0; 
+                if (state.animT < state.targetAnimT) {
+                    state.animT = Math.min(state.targetAnimT, state.animT + speed * delta);
+                    needsRedraw = true;
+                } else if (state.animT > state.targetAnimT) {
+                    state.animT = Math.max(state.targetAnimT, state.animT - speed * delta);
+                    needsRedraw = true;
+                } else {
+                    state.animIsPlaying = false;
+                }
+
+                // 更新复合阶段进度条样式
+                if (state.activeChapter === 3) {
+                    const percent = Math.min(100, (state.animT / 2.0) * 100);
+                    const bar = $('comp-progress-bar');
+                    if (bar) bar.style.width = `${percent}%`;
+                }
+            }
+
+            renderer.draw();
+            requestAnimationFrame(animateLoop);
+        }
+        requestAnimationFrame(animateLoop);
+
+        /**
+         * ----------------------------------------------------
+         * 数学公式面板联动与数据更新 (UI Synchronization)
+         * ----------------------------------------------------
+         */
+        function refreshMathDisplays() {
+            const ch = state.activeChapter;
+
+            // 浮动卡基础状态同步
+            updateText('status-zoom', `${Math.round((ch === 8 ? state.zoom3D : state.zoom) / 50 * 100)}%`);
+
+            if (ch === 1) {
+                updateText('val-c', state.c.toFixed(1));
+                updateText('val-d', state.d.toFixed(1));
+                updateText('formula-scalar-c', state.c.toFixed(1));
+                updateText('formula-scalar-d', state.d.toFixed(1));
+                updateText('formula-u-x', state.u.x.toFixed(1));
+                updateText('formula-u-y', state.u.y.toFixed(1));
+                updateText('formula-v-x', state.v.x.toFixed(1));
+                updateText('formula-v-y', state.v.y.toFixed(1));
+
+                const w = state.u.scale(state.c).add(state.v.scale(state.d));
+                updateText('formula-w-x', w.x.toFixed(1));
+                updateText('formula-w-y', w.y.toFixed(1));
+                
+                updateText('status-det', 'N/A');
+                updateText('status-orientation', '独立向量');
+                $('status-orientation').className = 'status-badge badge-positive';
+            } 
+            else if (ch === 2 || ch === 4) {
+                // Ch 2 & Ch 4 双向输入绑定
+                const a = state.matrix.a, b = state.matrix.b, c = state.matrix.c, d = state.matrix.d;
+                
+                // 同步输入控件
+                if (ch === 2) {
+                    syncInputValue('mat-a', a);
+                    syncInputValue('mat-b', b);
+                    syncInputValue('mat-c', c);
+                    syncInputValue('mat-d', d);
+                } else {
+                    syncInputValue('det-mat-a', a);
+                    syncInputValue('det-mat-b', b);
+                    syncInputValue('det-mat-c', c);
+                    syncInputValue('det-mat-d', d);
+                }
+
+                updateText('form-mat-a', a.toFixed(1));
+                updateText('form-mat-b', b.toFixed(1));
+                updateText('form-mat-c', c.toFixed(1));
+                updateText('form-mat-d', d.toFixed(1));
+
+                const detVal = state.matrix.det();
+                updateText('status-det', detVal.toFixed(2));
+                updateText('det-calc-process', `(${a.toFixed(1)})(${d.toFixed(1)}) - (${b.toFixed(1)})(${c.toFixed(1)})`);
+                updateText('det-calc-result', detVal.toFixed(2));
+
+                const badge = $('status-orientation');
+                if (Math.abs(detVal) < 1e-4) {
+                    badge.className = 'status-badge badge-warning';
+                    badge.textContent = '维度塌陷 (det=0)';
+                } else if (detVal > 0) {
+                    badge.className = 'status-badge badge-positive';
+                    badge.textContent = '正常定向 (det>0)';
+                } else {
+                    badge.className = 'status-badge badge-negative';
+                    badge.textContent = '定向反转 (det<0)';
+                }
+            }
+            else if (ch === 3) {
+                // 复合变换矩阵乘法
+                const a = state.compA, b = state.compB;
+                
+                // 同步输入控件
+                syncInputValue('cmat-a', a.a);
+                syncInputValue('cmat-b', a.b);
+                syncInputValue('cmat-c', a.c);
+                syncInputValue('cmat-d', a.d);
+                syncInputValue('cmat-e', b.a);
+                syncInputValue('cmat-f', b.b);
+                syncInputValue('cmat-g', b.c);
+                syncInputValue('cmat-h', b.d);
+                
+                // 安全渲染矩阵因子
+                renderCSSMatrix('comp-mat-a-box', a);
+                renderCSSMatrix('comp-mat-b-box', b);
+                
+                // 乘法计算
+                const res = a.multiplyMatrix(b);
+                renderCSSMatrix('comp-mat-res-box', res);
+
+                const detVal = res.det();
+                updateText('status-det', detVal.toFixed(2));
+                
+                const badge = $('status-orientation');
+                if (Math.abs(detVal) < 1e-4) {
+                    badge.className = 'status-badge badge-warning';
+                    badge.textContent = '塌缩';
+                } else {
+                    badge.className = 'status-badge badge-positive';
+                    badge.textContent = '正常';
+                }
+            }
+            else if (ch === 5) {
+                // 基底变换
+                syncInputValue('basis-v1x', state.basisV1.x);
+                syncInputValue('basis-v1y', state.basisV1.y);
+                syncInputValue('basis-v2x', state.basisV2.x);
+                syncInputValue('basis-v2y', state.basisV2.y);
+
+                // 渲染 x_std
+                const formulaStd = $('basis-formula-xstd');
+                formulaStd.replaceChildren();
+                const cellX = document.createElement('div'); cellX.className = 'matrix-cell'; cellX.textContent = state.basisVectorX.x.toFixed(1);
+                const cellY = document.createElement('div'); cellY.className = 'matrix-cell'; cellY.textContent = state.basisVectorX.y.toFixed(1);
+                formulaStd.appendChild(cellX); formulaStd.appendChild(cellY);
+
+                const formulaNew = $('basis-formula-xnew');
+                formulaNew.replaceChildren();
+
+                // 求解 P⁻¹ x_std
+                const p = new Matrix2x2(state.basisV1.x, state.basisV2.x, state.basisV1.y, state.basisV2.y);
+                const det = p.det();
+                if (Math.abs(det) < 1e-4) {
+                    const err = document.createElement('div');
+                    err.className = 'matrix-cell';
+                    err.textContent = '基底共线不可逆！';
+                    formulaNew.appendChild(err);
+                } else {
+                    const pInv = p.inverse();
+                    if (pInv) {
+                        const xNew = pInv.multiplyVector(state.basisVectorX);
+                        const cellNX = document.createElement('div'); cellNX.className = 'matrix-cell'; cellNX.textContent = xNew.x.toFixed(2);
+                        const cellNY = document.createElement('div'); cellNY.className = 'matrix-cell'; cellNY.textContent = xNew.y.toFixed(2);
+                        formulaNew.appendChild(cellNX); formulaNew.appendChild(cellNY);
+                    }
+                }
+            }
+            else if (ch === 6) {
+                // 线性方程组 Ax = b
+                const a = state.matrix.a, b = state.matrix.b, c = state.matrix.c, d = state.matrix.d;
+                
+                // 同步输入
+                syncInputValue('eq-mat-a', a);
+                syncInputValue('eq-mat-b', b);
+                syncInputValue('eq-mat-c', c);
+                syncInputValue('eq-mat-d', d);
+
+                const det = state.matrix.det();
+                const display = $('eq-solution-display');
+                display.replaceChildren();
+
+                if (Math.abs(det) > 1e-4) {
+                    // 可逆
+                    const inv = state.matrix.inverse();
+                    if (inv) {
+                        const x = inv.multiplyVector(state.eqVectorB);
+                        
+                        const label1 = document.createElement('span'); label1.textContent = '解向量 x = A⁻¹b = ';
+                        const matBox = document.createElement('div'); matBox.className = 'css-matrix';
+                        const content = document.createElement('div'); content.className = 'matrix-content matrix-2x1';
+                        
+                        const cx = document.createElement('div'); cx.className = 'matrix-cell'; cx.textContent = x.x.toFixed(2);
+                        const cy = document.createElement('div'); cy.className = 'matrix-cell'; cy.textContent = x.y.toFixed(2);
+                        
+                        content.appendChild(cx); content.appendChild(cy); matBox.appendChild(content);
+                        display.appendChild(label1); display.appendChild(matBox);
+                    }
+                } else {
+                    // 不可逆，零空间/投影
+                    const warning = document.createElement('span');
+                    warning.textContent = 'A不可逆！展示最小二乘近似解 x* 及投影线';
+                    warning.style.color = 'var(--color-eigen)';
+                    warning.style.fontSize = '11px';
+                    display.appendChild(warning);
+                }
+            }
+            else if (ch === 7) {
+                // 二次型椭圆主轴
+                const a = state.matrix.a, b = state.matrix.b, c = state.matrix.c, d = state.matrix.d;
+                syncInputValue('ell-mat-a', a);
+                syncInputValue('ell-mat-b', b);
+                syncInputValue('ell-mat-c', c);
+                syncInputValue('ell-mat-d', d);
+
+                const results = state.matrix.solveEigen();
+                const display = $('ell-eigen-display');
+                display.replaceChildren();
+
+                if (results.length === 0) {
+                    const line = document.createElement('span');
+                    line.textContent = '无实特征对（复矩阵旋转，椭圆旋转中）';
+                    display.appendChild(line);
+                } else {
+                    results.forEach(res => {
+                        const line = document.createElement('span');
+                        line.textContent = `轴拉伸倍数 λ = ${res.val.toFixed(2)} [ 方向: (${res.vec.x.toFixed(2)}, ${res.vec.y.toFixed(2)}) ]`;
+                        display.appendChild(line);
+                    });
+                }
+            }
+            else if (ch === 8) {
+                // 3D 矩阵变换
+                const det = state.matrix3D.det();
+                updateText('m3d-det-val', det.toFixed(3));
+                updateText('status-det', det.toFixed(3));
+
+                // 同步 3D 矩阵输入框的值
+                syncInputValue('m3d-11', state.matrix3D.m11);
+                syncInputValue('m3d-12', state.matrix3D.m12);
+                syncInputValue('m3d-13', state.matrix3D.m13);
+                syncInputValue('m3d-21', state.matrix3D.m21);
+                syncInputValue('m3d-22', state.matrix3D.m22);
+                syncInputValue('m3d-23', state.matrix3D.m23);
+                syncInputValue('m3d-31', state.matrix3D.m31);
+                syncInputValue('m3d-32', state.matrix3D.m32);
+                syncInputValue('m3d-33', state.matrix3D.m33);
+                
+                const badge = $('status-orientation');
+                if (Math.abs(det) < 1e-4) {
+                    badge.className = 'status-badge badge-warning';
+                    badge.textContent = '体积塌陷 (det=0)';
+                } else if (det > 0) {
+                    badge.className = 'status-badge badge-positive';
+                    badge.textContent = '正常体积';
+                } else {
+                    badge.className = 'status-badge badge-negative';
+                    badge.textContent = '手系翻转 (det<0)';
+                }
+            }
+        }
+
+        // 辅助渲染矩阵 DOM
+        function renderCSSMatrix(containerId, m2x2) {
+            const container = $(containerId);
+            if (!container) return;
+            container.replaceChildren();
+
+            const c1 = document.createElement('div'); c1.className = 'matrix-cell'; c1.textContent = m2x2.a.toFixed(1);
+            const c2 = document.createElement('div'); c2.className = 'matrix-cell'; c2.textContent = m2x2.b.toFixed(1);
+            const c3 = document.createElement('div'); c3.className = 'matrix-cell'; c3.textContent = m2x2.c.toFixed(1);
+            const c4 = document.createElement('div'); c4.className = 'matrix-cell'; c4.textContent = m2x2.d.toFixed(1);
+
+            container.appendChild(c1); container.appendChild(c2);
+            container.appendChild(c3); container.appendChild(c4);
+        }
+
+        // 双向安全同步输入框数值，防止干扰用户当前聚焦的输入状态
+        function syncInputValue(id, val) {
+            const el = $(id);
+            if (el && document.activeElement !== el) {
+                el.value = val.toFixed(1);
+            }
+        }
+
+        // Toast 消息
+        function showToast(msg, type = 'info') {
+            const box = $('toast-box');
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = msg;
+            if (type === 'warn') el.style.borderLeftColor = 'var(--color-eigen)';
+            else if (type === 'success') el.style.borderLeftColor = 'var(--color-j)';
+            box.appendChild(el);
+            setTimeout(() => el.classList.add('show'), 50);
+            setTimeout(() => {
+                el.classList.remove('show');
+                setTimeout(() => el.remove(), 400);
+            }, 3000);
+        }
+
+        /**
+         * ----------------------------------------------------
+         * 鼠标/手指交互控制器 (Drag & Drop Router)
+         * ----------------------------------------------------
+         */
+        const mainCanvas = $('main-canvas');
+
+        function getHandleAt(mathPos) {
+            const threshold = 16 / state.zoom;
+            const ch = state.activeChapter;
+
+            if (ch === 1) {
+                if (mathPos.distance(state.u) < threshold) return 'u';
+                if (mathPos.distance(state.v) < threshold) return 'v';
+            } 
+            else if (ch === 2 || ch === 4 || ch === 6 || ch === 7) {
+                if (state.animIsPlaying) return null;
+                const matrix = state.matrix;
+                const iTarget = new Vector2(matrix.a, matrix.c);
+                const jTarget = new Vector2(matrix.b, matrix.d);
+                
+                // 只有在 Ch 2, 4 模式下才可以拖动基底端点
+                if (ch === 2 || ch === 4) {
+                    if (mathPos.distance(iTarget) < threshold) return 'i_prime';
+                    if (mathPos.distance(jTarget) < threshold) return 'j_prime';
+                }
+                if (ch === 6) {
+                    if (mathPos.distance(state.eqVectorB) < threshold) return 'eq_b';
+                }
+            }
+            else if (ch === 5) {
+                if (mathPos.distance(state.basisV1) < threshold) return 'v1';
+                if (mathPos.distance(state.basisV2) < threshold) return 'v2';
+                if (mathPos.distance(state.basisVectorX) < threshold) return 'basis_x';
+            }
+            return null;
+        }
+
+        function onStart(clientX, clientY, button) {
+            const rect = mainCanvas.getBoundingClientRect();
+            const screenVec = new Vector2(clientX - rect.left, clientY - rect.top);
+            
+            if (state.activeChapter === 8) {
+                // 3D 旋转视角控制
+                state.isRotating3D = true;
+                state.panStart.set(clientX, clientY);
+                mainCanvas.style.cursor = 'move';
+                return;
+            }
+
+            const mathVec = renderer.screenToMath(screenVec);
+            const handle = getHandleAt(mathVec);
+
+            if (handle && button !== 2) {
+                state.dragTarget = handle;
+                state.dragStartPos.set(mathVec.x, mathVec.y);
+                mainCanvas.style.cursor = 'grabbing';
+            } else {
+                state.isPanning = true;
+                state.panStart.set(clientX - state.panOffset.x, clientY - state.panOffset.y);
+                mainCanvas.style.cursor = 'move';
+            }
+        }
+
+        function onMove(clientX, clientY) {
+            const rect = mainCanvas.getBoundingClientRect();
+            const screenVec = new Vector2(clientX - rect.left, clientY - rect.top);
+
+            if (state.activeChapter === 8) {
+                if (state.isRotating3D) {
+                    const dx = clientX - state.panStart.x;
+                    const dy = clientY - state.panStart.y;
+                    state.yaw += dx * 0.007;
+                    state.pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, state.pitch + dy * 0.007));
+                    state.panStart.set(clientX, clientY);
+                }
+                return;
+            }
+
+            const mathVec = renderer.screenToMath(screenVec);
+
+            if (state.dragTarget) {
+                const nx = Math.round(mathVec.x * 10) / 10;
+                const ny = Math.round(mathVec.y * 10) / 10;
+
+                switch (state.dragTarget) {
+                    case 'u': state.u.set(nx, ny); break;
+                    case 'v': state.v.set(nx, ny); break;
+                    case 'i_prime': state.matrix.a = nx; state.matrix.c = ny; break;
+                    case 'j_prime': state.matrix.b = nx; state.matrix.d = ny; break;
+                    case 'v1': state.basisV1.set(nx, ny); break;
+                    case 'v2': state.basisV2.set(nx, ny); break;
+                    case 'basis_x': state.basisVectorX.set(nx, ny); break;
+                    case 'eq_b': state.eqVectorB.set(nx, ny); break;
+                }
+                refreshMathDisplays();
+            } else if (state.isPanning) {
+                state.panOffset.set(clientX - state.panStart.x, clientY - state.panStart.y);
+            } else {
+                const handle = getHandleAt(mathVec);
+                mainCanvas.style.cursor = handle ? 'grab' : 'default';
+            }
+        }
+
+        function onEnd() {
+            state.dragTarget = null;
+            state.isPanning = false;
+            state.isRotating3D = false;
+            mainCanvas.style.cursor = 'default';
+        }
+
+        // 监听视口事件
+        mainCanvas.addEventListener('mousedown', e => { onStart(e.clientX, e.clientY, e.button); e.preventDefault(); });
+        mainCanvas.addEventListener('mousemove', e => { onMove(e.clientX, e.clientY); });
+        window.addEventListener('mouseup', onEnd);
+        mainCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        // 移动端支持
+        mainCanvas.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) onStart(e.touches[0].clientX, e.touches[0].clientY, 0);
+            e.preventDefault();
+        });
+        mainCanvas.addEventListener('touchmove', e => {
+            if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
+        });
+        mainCanvas.addEventListener('touchend', onEnd);
+
+        // 滚轮缩放
+        mainCanvas.addEventListener('wheel', e => {
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            if (state.activeChapter === 8) {
+                state.zoom3D = Math.max(10, Math.min(150, state.zoom3D * factor));
+            } else {
+                state.zoom = Math.max(15, Math.min(200, state.zoom * factor));
+            }
+            refreshMathDisplays();
+            e.preventDefault();
+        });
+
+        /**
+         * ----------------------------------------------------
+         * 章节与标签切换控制器 (Tabs Router)
+         * ----------------------------------------------------
+         */
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = parseInt(btn.getAttribute('data-tab'), 10);
+                if (target === state.activeChapter) return;
+
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.chapter-panel').forEach(p => p.style.display = 'none');
+                $(`panel-chapter-${target}`).style.display = 'block';
+
+                state.activeChapter = target;
+                state.animT = 1.0;
+                state.targetAnimT = 1.0;
+                state.animIsPlaying = false;
+
+                // 切换浮动卡指示器
+                const tabNames = [
+                    "1. 向量与线性组合", "2. 矩阵线性变换", "3. 复合线性变换",
+                    "4. 行列式面积缩放", "5. 坐标基底变换", "6. 方程组投影空间",
+                    "7. 特征向量椭圆", "8. 三维正交投影变换"
+                ];
+                updateText('status-chapter', tabNames[target - 1]);
+
+                const tip = $('drag-tip-text');
+                if (target === 8) {
+                    tip.textContent = "提示：按住鼠标左键并拖拽，可以旋转 3D 视角查看几何体";
+                } else {
+                    tip.textContent = "提示：拖动向量端点进行改变，或拖动空白处平移原点";
+                }
+
+                // Ch 3 复合变换进度条显隐控制
+                $('comp-progress-container').style.display = (target === 3) ? 'block' : 'none';
+
+                initChapterPresets(target);
+                refreshMathDisplays();
+                showToast(`切换至第 ${target} 章节`);
+            });
+        });
+
+        // 默认数值初始化
+        function initChapterPresets(chapter) {
+            state.panOffset.set(0,0);
+            
+            if (chapter === 1) {
+                state.u.set(2, 1); state.v.set(-1, 2);
+                state.c = 1.0; state.d = 1.0;
+                $('slider-c').value = '1.0'; $('slider-d').value = '1.0';
+                state.showSpan = false; $('chk-show-span').checked = false;
+            }
+            else if (chapter === 2) {
+                state.matrix.set(1, 1, 0, 1);
+                state.animT = 0.0; state.targetAnimT = 1.0;
+                setActiveChip(2, 'shear');
+            }
+            else if (chapter === 3) {
+                state.compA.set(1, 1, 0, 1); // shear
+                state.compB.set(0.7, -0.7, 0.7, 0.7); // rot 45
+                state.animT = 0.0; state.targetAnimT = 2.0; // 複合二阶段动画目标定为 2.0
+                setActiveChip(3, 'rot-then-shear');
+                
+                $('cmat-a').value = '1.0'; $('cmat-b').value = '1.0';
+                $('cmat-c').value = '0.0'; $('cmat-d').value = '1.0';
+                $('cmat-e').value = '0.7'; $('cmat-f').value = '-0.7';
+                $('cmat-g').value = '0.7'; $('cmat-h').value = '0.7';
+            }
+            else if (chapter === 4) {
+                state.matrix.set(2, 0, 0, 1);
+                state.animT = 1.0;
+                setActiveChip(4, 'area2');
+            }
+            else if (chapter === 5) {
+                state.basisV1.set(2.0, 0.5);
+                state.basisV2.set(0.5, 1.5);
+                state.basisVectorX.set(1.5, 2.0);
+                setActiveChip(5, 'skew');
+            }
+            else if (chapter === 6) {
+                state.matrix.set(1.5, 0.5, 0.5, 1.0);
+                state.eqVectorB.set(2.0, 1.5);
+                state.animT = 0.0; state.targetAnimT = 1.0;
+                setActiveChip(6, 'invertible');
+            }
+            else if (chapter === 7) {
+                state.matrix.set(2.0, 0.5, 0.5, 1.0); // 对称矩阵
+                setActiveChip(7, 'symmetric');
+            }
+            else if (chapter === 8) {
+                state.matrix3D.set(1.2, 0.2, 0, 0.2, 1.0, 0.5, 0, 0, 0.8);
+                state.yaw = -0.6; state.pitch = 0.4;
+                state.animT = 0.0; state.targetAnimT = 1.0;
+                setActiveChip(8, 'shear3d');
+                
+                $('m3d-11').value = '1.2'; $('m3d-12').value = '0.2'; $('m3d-13').value = '0.0';
+                $('m3d-21').value = '0.2'; $('m3d-22').value = '1.0'; $('m3d-23').value = '0.5';
+                $('m3d-31').value = '0.0'; $('m3d-32').value = '0.0'; $('m3d-33').value = '0.8';
+            }
+        }
+
+        function setActiveChip(chNum, name) {
+            document.querySelectorAll(`[data-preset-c${chNum}]`).forEach(chip => {
+                if (chip.getAttribute(`data-preset-c${chNum}`) === name) chip.classList.add('active');
+                else chip.classList.remove('active');
+            });
+        }
+
+        /**
+         * ----------------------------------------------------
+         * 滑块与表单元素监听绑定
+         * ----------------------------------------------------
+         */
+        $('slider-c').addEventListener('input', e => { state.c = parseFloat(e.target.value); refreshMathDisplays(); });
+        $('slider-d').addEventListener('input', e => { state.d = parseFloat(e.target.value); refreshMathDisplays(); });
+        $('chk-show-span').addEventListener('change', e => { state.showSpan = e.target.checked; });
+
+        function bindInput(id, callback) {
+            $(id).addEventListener('input', e => {
+                const v = parseFloat(e.target.value) || 0;
+                callback(v);
+                refreshMathDisplays();
+            });
+        }
+
+        // Ch 2 & Ch 4 单矩阵输入绑定
+        bindInput('mat-a', v => state.matrix.a = v);
+        bindInput('mat-b', v => state.matrix.b = v);
+        bindInput('mat-c', v => state.matrix.c = v);
+        bindInput('mat-d', v => state.matrix.d = v);
+
+        bindInput('det-mat-a', v => state.matrix.a = v);
+        bindInput('det-mat-b', v => state.matrix.b = v);
+        bindInput('det-mat-c', v => state.matrix.c = v);
+        bindInput('det-mat-d', v => state.matrix.d = v);
+
+        // Ch 3 复合变换输入绑定
+        bindInput('cmat-a', v => state.compA.a = v);
+        bindInput('cmat-b', v => state.compA.b = v);
+        bindInput('cmat-c', v => state.compA.c = v);
+        bindInput('cmat-d', v => state.compA.d = v);
+        
+        bindInput('cmat-e', v => state.compB.a = v);
+        bindInput('cmat-f', v => state.compB.b = v);
+        bindInput('cmat-g', v => state.compB.c = v);
+        bindInput('cmat-h', v => state.compB.d = v);
+
+        // Ch 5 基底输入绑定
+        bindInput('basis-v1x', v => state.basisV1.x = v);
+        bindInput('basis-v1y', v => state.basisV1.y = v);
+        bindInput('basis-v2x', v => state.basisV2.x = v);
+        bindInput('basis-v2y', v => state.basisV2.y = v);
+
+        // Ch 6 方程组输入绑定
+        bindInput('eq-mat-a', v => state.matrix.a = v);
+        bindInput('eq-mat-b', v => state.matrix.b = v);
+        bindInput('eq-mat-c', v => state.matrix.c = v);
+        bindInput('eq-mat-d', v => state.matrix.d = v);
+
+        // Ch 7 椭圆输入绑定
+        bindInput('ell-mat-a', v => state.matrix.a = v);
+        bindInput('ell-mat-b', v => state.matrix.b = v);
+        bindInput('ell-mat-c', v => state.matrix.c = v);
+        bindInput('ell-mat-d', v => state.matrix.d = v);
+
+        // Ch 8 3D输入绑定
+        bindInput('m3d-11', v => state.matrix3D.m11 = v);
+        bindInput('m3d-12', v => state.matrix3D.m12 = v);
+        bindInput('m3d-13', v => state.matrix3D.m13 = v);
+        
+        bindInput('m3d-21', v => state.matrix3D.m21 = v);
+        bindInput('m3d-22', v => state.matrix3D.m22 = v);
+        bindInput('m3d-23', v => state.matrix3D.m23 = v);
+        
+        bindInput('m3d-31', v => state.matrix3D.m31 = v);
+        bindInput('m3d-32', v => state.matrix3D.m32 = v);
+        bindInput('m3d-33', v => state.matrix3D.m33 = v);
+
+        // 动画播放触发器
+        function triggerAnimate(maxT = 1.0) {
+            if (state.animIsPlaying) return;
+            state.animT = 0.0;
+            state.targetAnimT = maxT;
+            state.animIsPlaying = true;
+        }
+
+        function triggerReset() {
+            state.animT = 0.0;
+            state.targetAnimT = 0.0;
+            state.animIsPlaying = false;
+            const bar = $('comp-progress-bar');
+            if (bar) bar.style.width = '0%';
+        }
+
+        $('btn-animate').addEventListener('click', () => triggerAnimate(1.0));
+        $('btn-reset-transform').addEventListener('click', triggerReset);
+        
+        $('btn-composite-animate').addEventListener('click', () => triggerAnimate(2.0)); // 复合二阶段动画目标是 2.0
+        $('btn-composite-reset').addEventListener('click', triggerReset);
+
+        $('btn-eq-animate').addEventListener('click', () => triggerAnimate(1.0));
+        $('btn-eq-reset').addEventListener('click', triggerReset);
+
+        $('btn-3d-animate').addEventListener('click', () => triggerAnimate(1.0));
+        $('btn-3d-reset').addEventListener('click', triggerReset);
+
+        // 浮动视口动画绑定
+        $('vp-btn-play').addEventListener('click', () => {
+            const limitT = (state.activeChapter === 3) ? 2.0 : 1.0;
+            triggerAnimate(limitT);
+        });
+        $('vp-btn-pause').addEventListener('click', triggerReset);
+
+        // 缩放控制
+        function zoom(factor) {
+            if (state.activeChapter === 8) {
+                state.zoom3D = Math.max(10, Math.min(150, state.zoom3D * factor));
+            } else {
+                state.zoom = Math.max(15, Math.min(200, state.zoom * factor));
+            }
+            refreshMathDisplays();
+        }
+        $('btn-zoom-in').addEventListener('click', () => zoom(1.2));
+        $('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+        $('vp-btn-zoom-in').addEventListener('click', () => zoom(1.2));
+        $('vp-btn-zoom-out').addEventListener('click', () => zoom(0.8));
+
+        $('btn-reset-pan').addEventListener('click', () => {
+            state.panOffset.set(0,0);
+            state.zoom = 50; state.zoom3D = 40;
+            state.yaw = -0.6; state.pitch = 0.4;
+            refreshMathDisplays();
+            showToast('已重置视口原点与三维朝角');
+        });
+
+        /**
+         * ----------------------------------------------------
+         * 回归预设芯片绑定 (Chips Controller)
+         * ----------------------------------------------------
+         */
+        function bindChip(chNum, name, action) {
+            const el = document.querySelector(`[data-preset-c${chNum}="${name}"]`);
+            if (!el) return;
+            el.addEventListener('click', () => {
+                setActiveChip(chNum, name);
+                action();
+                refreshMathDisplays();
+                const limitT = (chNum === 3) ? 2.0 : 1.0;
+                triggerAnimate(limitT);
+            });
+        }
+
+        // Ch 1
+        bindChip(1, 'ortho', () => {
+            state.u.set(2, 0); state.v.set(0, 2); state.c = 1.5; state.d = 1.2;
+            $('slider-c').value = '1.5'; $('slider-d').value = '1.2';
+        });
+        bindChip(1, 'colinear', () => {
+            state.u.set(1.5, 1.5); state.v.set(-1, -1); state.c = 1.0; state.d = 1.0;
+            $('slider-c').value = '1.0'; $('slider-d').value = '1.0';
+            state.showSpan = true; $('chk-show-span').checked = true;
+            showToast('向量共线，张成空间塌缩！', 'warn');
+        });
+
+        // Ch 2
+        bindChip(2, 'identity', () => state.matrix.set(1, 0, 0, 1));
+        bindChip(2, 'shear', () => state.matrix.set(1, 1, 0, 1));
+        bindChip(2, 'rotation', () => { const a = Math.PI/4; state.matrix.set(Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a)); });
+        bindChip(2, 'projection', () => state.matrix.set(1, 0, 0, 0));
+
+        // Ch 3
+        bindChip(3, 'rot-then-shear', () => {
+            state.compA.set(1, 1, 0, 1);
+            const a = Math.PI/4; state.compB.set(Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a));
+        });
+        bindChip(3, 'shear-then-rot', () => {
+            const a = Math.PI/4; state.compA.set(Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a));
+            state.compB.set(1, 1, 0, 1);
+        });
+
+        // Ch 4
+        bindChip(4, 'area2', () => state.matrix.set(2, 0, 0, 1));
+        bindChip(4, 'area-neg', () => state.matrix.set(-1, 1, 0, 1));
+        bindChip(4, 'area0', () => state.matrix.set(1, 1, 1, 1));
+
+        // Ch 5
+        bindChip(5, 'skew', () => { state.basisV1.set(2.0, 0.5); state.basisV2.set(0.5, 1.5); });
+        bindChip(5, 'ortho', () => { state.basisV1.set(1.5, 0.0); state.basisV2.set(0.0, 1.5); });
+
+        // Ch 6
+        bindChip(6, 'invertible', () => { state.matrix.set(1.5, 0.5, 0.5, 1.0); state.eqVectorB.set(2.0, 1.5); });
+        bindChip(6, 'collapse', () => { state.matrix.set(1.0, 1.0, 1.0, 1.0); state.eqVectorB.set(2.0, 1.0); });
+
+        // Ch 7
+        bindChip(7, 'symmetric', () => state.matrix.set(2.0, 0.5, 0.5, 1.0));
+        bindChip(7, 'unsymmetric', () => state.matrix.set(1.5, 1.0, -0.5, 1.0));
+
+        // Ch 8
+        bindChip(8, 'shear3d', () => state.matrix3D.set(1.0, 0.5, 0, 0, 1.0, 0, 0, 0, 1.0));
+        bindChip(8, 'rot3d', () => {
+            const a = Math.PI/6; // 30 deg
+            state.matrix3D.set(Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a), 0, 0, 0, 1.0);
+        });
+        bindChip(8, 'proj3d', () => state.matrix3D.set(1.0, 0, 0, 0, 1.0, 0, 0, 0, 0));
+
+        /**
+         * ----------------------------------------------------
+         * 系统运行时数学模型自检 (Regressive Self-Test Suite)
+         * ----------------------------------------------------
+         */
+        const runSelfTests = () => {
+            const results = [];
+            let passes = 0;
+
+            const assert = (name, cond) => {
+                if (cond) passes++;
+                results.push({ name, pass: !!cond });
+            };
+
+            // Test 1: 向量基础
+            const v1 = new Vector2(3, 4);
+            assert("Vector2 length computation (3,4) = 5", Math.abs(v1.length() - 5) < 1e-9);
+
+            // Test 2: 2x2 逆矩阵求解
+            const mat = new Matrix2x2(2, 1, 1, 2); // det = 3
+            const inv = mat.inverse();
+            assert("Matrix2x2 inverse det check", Math.abs(mat.det() - 3) < 1e-9);
+            assert("Matrix2x2 inverse element validation", inv && Math.abs(inv.a - 2/3) < 1e-5 && Math.abs(inv.b - -1/3) < 1e-5);
+
+            // Test 3: 矩阵复合乘法
+            const matA = new Matrix2x2(1, 1, 0, 1);
+            const matB = new Matrix2x2(2, 0, 0, 2);
+            const matAB = matA.multiplyMatrix(matB); // [[2,2],[0,2]]
+            assert("Matrix multiplication (Shear * Scale)", matAB.a === 2 && matAB.b === 2 && matAB.c === 0 && matAB.d === 2);
+
+            // Test 4: 3x3 行列式体积
+            const mat3D = new Matrix3x3(
+                1.5, 0.5, 0.2,
+                0,   2.0, 0.5,
+                0,   0,   1.0
+            ); // det = 1.5 * 2.0 * 1.0 = 3.0
+            assert("Matrix3x3 determinant computation", Math.abs(mat3D.det() - 3.0) < 1e-9);
+
+            // Test 5: 零空间退化维度正交性
+            const matSingular = new Matrix2x2(1, 1, 1, 1); // Rank 1
+            // 零空间向量 n = [-1, 1]
+            let n = new Vector2(-1, 1).normalize();
+            const output = matSingular.multiplyVector(n);
+            assert("Rank-1 Nullspace vector maps to zero vector", output.length() < 1e-5);
+
+            // 写入模态框 DOM
+            const box = $('test-output');
+            box.replaceChildren();
+
+            results.forEach(res => {
+                const row = document.createElement('div'); row.className = 'test-line';
+                const label = document.createElement('span'); label.textContent = res.name;
+                const status = document.createElement('span');
+                status.className = res.pass ? 'test-pass' : 'test-fail';
+                status.textContent = res.pass ? 'PASS' : 'FAIL';
+                row.appendChild(label); row.appendChild(status); box.appendChild(row);
+            });
+
+            const summary = document.createElement('div');
+            summary.style.marginTop = '10px'; summary.style.borderTop = '1px solid var(--border-light)'; summary.style.paddingTop = '6px';
+            summary.style.fontWeight = 'bold';
+            summary.textContent = `自检汇总: 通过率 ${passes}/${results.length}`;
+            if (passes === results.length) {
+                summary.style.color = 'var(--color-j)';
+            } else {
+                summary.style.color = 'var(--color-eigen)';
+            }
+            box.appendChild(summary);
+
+            return passes === results.length;
+        };
+
+        // 绑定案例卡片的悬停事件，触发 Canvas 上的实际案例几何互动渲染
+        document.querySelectorAll('.app-case-card').forEach(card => {
+            const chNum = parseInt(card.getAttribute('data-case-chapter'), 10);
+            card.addEventListener('mouseenter', () => {
+                state.hoveredCase = chNum;
+            });
+            card.addEventListener('mouseleave', () => {
+                state.hoveredCase = null;
+            });
+        });
+
+        // 页眉双击事件绑定触发自测
+        $('sidebar-hdr').addEventListener('dblclick', () => {
+            runSelfTests();
+            $('modal-bg').style.display = 'block';
+            $('test-modal').style.display = 'block';
+        });
+        $('btn-close-test').addEventListener('click', () => {
+            $('modal-bg').style.display = 'none';
+            $('test-modal').style.display = 'none';
+        });
+
+        // 启动一次自检
+        const ok = runSelfTests();
+        if (ok) {
+            showToast("线性代数数学计算引擎自检全部通过！(双击侧边栏页眉可看详情)", "success");
+        } else {
+            showToast("数学引擎自检失败，请打开控制台排查", "warn");
+        }
+
+        // 初始化第一次页面加载
+        initChapterPresets(1);
+        refreshMathDisplays();
+    </script>
+</body>
+</html>
